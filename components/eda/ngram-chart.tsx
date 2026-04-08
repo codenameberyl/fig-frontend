@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { NGrams } from '@/lib/types'
+import type { NGrams, NGramEntry } from '@/lib/types'
 
 interface NGramChartProps {
   ngramData: NGrams
