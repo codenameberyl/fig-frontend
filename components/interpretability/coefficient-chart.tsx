@@ -10,11 +10,10 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { CoefficientEntry } from '@/lib/types'
 
 interface CoefficientChartProps {
-  lonelyIndicators: CoefficientEntry[]
-  nonLonelyIndicators: CoefficientEntry[]
+  lonelyIndicators: { feature: string; coefficient: number }[]
+  nonLonelyIndicators: { feature: string; coefficient: number }[]
 }
 
 const LONELY_COLOR = 'oklch(0.65 0.2 15)'
