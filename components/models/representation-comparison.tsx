@@ -32,7 +32,7 @@ export function RepresentationComparison({ data }: RepresentationComparisonProps
     Accuracy: item.accuracy ?? 0,
     F1: item.f1,
     'ROC-AUC': item.roc_auc ?? 0,
-    bestModel: item.best_model,
+    model: item.model,
   }))
 
   return (
@@ -74,8 +74,8 @@ export function RepresentationComparison({ data }: RepresentationComparisonProps
                   name,
                 ]}
                 labelFormatter={(label, payload) => {
-                  if (payload?.[0]?.payload?.bestModel) {
-                    return `${label} (${payload[0].payload.bestModel})`
+                  if (payload?.[0]?.payload?.model) {
+                    return `${label} (${payload[0].payload.model})`
                   }
                   return label
                 }}
