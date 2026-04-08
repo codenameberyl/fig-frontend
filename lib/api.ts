@@ -25,7 +25,7 @@ import type {
   PredictResponse,
 } from './types'
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://your-space.hf.space/api'
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://codenameberyl-fig-lone.hf.space/api'
 
 // Stable results (revalidate every hour)
 const STABLE = { next: { revalidate: 3600 } }
