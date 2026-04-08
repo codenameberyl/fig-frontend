@@ -371,63 +371,6 @@ export default function InterpretabilityPage() {
     </div>
   )
 }
-  {
-    representation: 'linguistic',
-    interpretability_score: 5,
-    computational_cost: 'Very Low',
-    best_f1: 0.709,
-    rationale: 'Direct feature importance from coefficients. Each feature has clear semantic meaning.',
-    top_lonely_features: ['pronoun_ratio', 'first_person_ratio', 'negation_ratio', 'emotion_word_ratio', 'hedge_ratio'],
-    top_non_lonely_features: ['social_word_ratio', 'certainty_ratio', 'exclamation_ratio', 'question_ratio', 'avg_word_length'],
-  },
-  {
-    representation: 'tfidf',
-    interpretability_score: 4,
-    computational_cost: 'Low',
-    best_f1: 0.855,
-    rationale: 'Individual n-gram weights can be examined. Large feature space requires dimensionality reduction for visualization.',
-    top_lonely_features: ['alone', 'lonely', 'no one', 'feel like', 'friends'],
-    top_non_lonely_features: ['happy', 'great', 'love', 'today', 'fun'],
-  },
-  {
-    representation: 'tfidf_linguistic',
-    interpretability_score: 4,
-    computational_cost: 'Low',
-    best_f1: 0.862,
-    rationale: 'Combines interpretable linguistic features with n-gram analysis.',
-    top_lonely_features: ['alone', 'pronoun_ratio', 'lonely', 'feel like', 'no one'],
-    top_non_lonely_features: ['happy', 'social_word_ratio', 'great', 'love', 'certainty_ratio'],
-  },
-  {
-    representation: 'word2vec',
-    interpretability_score: 2,
-    computational_cost: 'Medium',
-    best_f1: 0.789,
-    rationale: 'Dense embeddings lack direct interpretability. Requires embedding visualization techniques.',
-    top_lonely_features: [],
-    top_non_lonely_features: [],
-  },
-  {
-    representation: 'sbert',
-    interpretability_score: 2,
-    computational_cost: 'Medium-High',
-    best_f1: 0.877,
-    rationale: 'Contextual embeddings capture semantic meaning but are not directly interpretable.',
-    top_lonely_features: [],
-    top_non_lonely_features: [],
-  },
-  {
-    representation: 'distilbert',
-    interpretability_score: 1,
-    computational_cost: 'High',
-    best_f1: 0.909,
-    rationale: 'Black-box neural network. Attention weights provide limited insight into decision-making.',
-    top_lonely_features: [],
-    top_non_lonely_features: [],
-  },
-]
-
-const mockCoefficients = {
   linguistic: {
     lonely_indicators: [
       { feature: 'first_person_ratio', coefficient: 2.34 },
