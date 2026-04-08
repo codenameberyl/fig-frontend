@@ -141,6 +141,7 @@ export default function DocsPage() {
                   <li><strong>RQ2:</strong> How well can baseline structural text classification models detect loneliness self-disclosure?</li>
                   <li><strong>RQ3:</strong> How do text representations affect predictive performance?</li>
                   <li><strong>RQ4:</strong> What trade-offs exist between performance and interpretability?</li>
+                  <li><strong>RQ5:</strong> What patterns characterize model errors and misclassifications?</li>
                 </ul>
               </div>
             </section>

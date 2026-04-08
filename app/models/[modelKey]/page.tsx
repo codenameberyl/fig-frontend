@@ -1,50 +1,18 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { PlotImage } from '@/components/shared/plot-image'
+import { LoadingState } from '@/components/shared/loading-state'
+import { ErrorState } from '@/components/shared/error-state'
 import { ConfusionMatrixDisplay } from '@/components/models/confusion-matrix-display'
 import { ROCCurveChart } from '@/components/models/roc-curve-chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-// Mock data - would come from API
-const mockConfusionMatrix = {
-  tn: 278,
-  fp: 22,
-  fn: 28,
-  tp: 236,
-  sensitivity: 0.894,
-  specificity: 0.927,
-}
-
-const mockRocCurve = {
-  auc: 0.967,
-  points: Array.from({ length: 50 }, (_, i) => ({
-    fpr: i / 49,
-    tpr: Math.min(1, (i / 49) * 1.2 + Math.random() * 0.1),
-    threshold: 1 - i / 49,
-  })),
-  optimal_threshold: 0.847,
-  optimal_fpr: 0.073,
-  optimal_tpr: 0.894,
-}
-
-const mockClassificationReport = [
-  { label: 'Non-Lonely', precision: 0.908, recall: 0.927, f1_score: 0.917, support: 300 },
-  { label: 'Lonely', precision: 0.915, recall: 0.894, f1_score: 0.904, support: 264 },
-  { label: 'Macro Avg', precision: 0.911, recall: 0.910, f1_score: 0.911, support: 564 },
-  { label: 'Weighted Avg', precision: 0.911, recall: 0.912, f1_score: 0.911, support: 564 },
-]
-
-const mockMetrics = {
-  accuracy: 0.912,
-  precision: 0.911,
-  recall: 0.910,
-  f1: 0.909,
-}
+import { getFullReport } from '@/lib/api'
+import type { TestReport, RocPoint } from '@/lib/types'
 
 export default function ModelDetailPage({
   params,
@@ -52,17 +20,107 @@ export default function ModelDetailPage({
   params: Promise<{ modelKey: string }>
 }) {
   const { modelKey } = use(params)
-  
-  // Parse model key into representation and model name
-  const parts = modelKey.split('_')
-  const representation = parts.slice(0, -2).join('_') || parts[0]
-  const model = parts.slice(-2).join(' ').replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+  const [testReport, setTestReport] = useState<TestReport | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const report = await getFullReport(modelKey)
+        setTestReport(report)
+        setError(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch model details')
+        setTestReport(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [modelKey])
+
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <PageHeader
+          title={modelKey}
+          subtitle="Model performance details and diagnostics"
+        />
+        <div className="flex-1 p-6">
+          <ErrorState message={error} />
+        </div>
+      </div>
+    )
+  }
+
+  if (loading || !testReport) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <PageHeader
+          title={modelKey}
+          subtitle="Model performance details and diagnostics"
+        />
+        <div className="flex-1 p-6">
+          <LoadingState message="Loading model details..." />
+        </div>
+      </div>
+    )
+  }
+
+  const { confusion_matrix, classification_report, roc_curve } = testReport
+
+  // Convert ROC data for chart
+  const rocPoints: RocPoint[] = roc_curve.fpr.map((fpr, idx) => ({
+    fpr,
+    tpr: roc_curve.tpr[idx],
+    threshold: roc_curve.thresholds[idx],
+  }))
+
+  // Build classification report table data
+  const classReportRows = [
+    {
+      label: 'Non-Lonely',
+      precision: classification_report['Non-Lonely'].precision,
+      recall: classification_report['Non-Lonely'].recall,
+      f1_score: classification_report['Non-Lonely']['f1-score'],
+      support: classification_report['Non-Lonely'].support,
+    },
+    {
+      label: 'Lonely',
+      precision: classification_report['Lonely'].precision,
+      recall: classification_report['Lonely'].recall,
+      f1_score: classification_report['Lonely']['f1-score'],
+      support: classification_report['Lonely'].support,
+    },
+    {
+      label: 'Macro Avg',
+      precision: classification_report['macro avg'].precision,
+      recall: classification_report['macro avg'].recall,
+      f1_score: classification_report['macro avg']['f1-score'],
+      support: classification_report['macro avg'].support,
+    },
+    {
+      label: 'Weighted Avg',
+      precision: classification_report['weighted avg'].precision,
+      recall: classification_report['weighted avg'].recall,
+      f1_score: classification_report['weighted avg']['f1-score'],
+      support: classification_report['weighted avg'].support,
+    },
+  ]
+
+  const metrics = {
+    accuracy: confusion_matrix.accuracy,
+    precision: classification_report['weighted avg'].precision,
+    recall: classification_report['weighted avg'].recall,
+    f1: classification_report['weighted avg']['f1-score'],
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader
-        title={`${representation} / ${model}`}
+        title={`${testReport.representation} / ${testReport.model}`}
         subtitle="Model performance details and diagnostics"
       />
 
@@ -84,22 +142,22 @@ export default function ModelDetailPage({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               label="Accuracy"
-              value={mockMetrics.accuracy.toFixed(3)}
+              value={metrics.accuracy.toFixed(3)}
               accentColor="violet"
             />
             <MetricCard
               label="Precision"
-              value={mockMetrics.precision.toFixed(3)}
+              value={metrics.precision.toFixed(3)}
               accentColor="cyan"
             />
             <MetricCard
               label="Recall"
-              value={mockMetrics.recall.toFixed(3)}
+              value={metrics.recall.toFixed(3)}
               accentColor="rose"
             />
             <MetricCard
               label="F1 Score"
-              value={mockMetrics.f1.toFixed(3)}
+              value={metrics.f1.toFixed(3)}
               accentColor="blue"
             />
           </div>
@@ -108,7 +166,7 @@ export default function ModelDetailPage({
         {/* Confusion Matrix & ROC Curve */}
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <ConfusionMatrixDisplay data={mockConfusionMatrix} />
+            <ConfusionMatrixDisplay data={confusion_matrix} />
             <PlotImage
               section="models"
               plotName={`eval_confusion_${modelKey}.png`}
@@ -118,11 +176,11 @@ export default function ModelDetailPage({
           </div>
           <div className="space-y-4">
             <ROCCurveChart
-              points={mockRocCurve.points}
-              auc={mockRocCurve.auc}
-              optimalThreshold={mockRocCurve.optimal_threshold}
-              optimalFpr={mockRocCurve.optimal_fpr}
-              optimalTpr={mockRocCurve.optimal_tpr}
+              points={rocPoints}
+              auc={roc_curve.auc}
+              optimalThreshold={roc_curve.optimal_threshold}
+              optimalFpr={roc_curve.optimal_fpr}
+              optimalTpr={roc_curve.optimal_tpr}
             />
             <PlotImage
               section="models"
@@ -162,7 +220,7 @@ export default function ModelDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {mockClassificationReport.map((row, idx) => (
+                    {classReportRows.map((row, idx) => (
                       <tr
                         key={row.label}
                         className={`border-b border-border last:border-b-0 ${

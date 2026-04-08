@@ -331,3 +331,13 @@ export interface PredictResponse {
   model: string
   input_text: string
 }
+
+// Helper types for components
+export interface RocPoint {
+  fpr: number
+  tpr: number
+  threshold?: number
+}
+
+export type ConfusionMatrixData = ConfusionMatrix
+

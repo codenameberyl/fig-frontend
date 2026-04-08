@@ -10,12 +10,11 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { NGramEntry } from '@/lib/types'
+import type { NGrams } from '@/lib/types'
 
 interface NGramChartProps {
-  lonelyData: NGramEntry[]
-  nonLonelyData: NGramEntry[]
-  title: string
+  ngramData: NGrams
+  ngramType: 'unigrams' | 'bigrams'
 }
 
 const LONELY_COLOR = '#f43f5e'
@@ -88,7 +87,11 @@ function SingleNGramChart({
   )
 }
 
-export function NGramChart({ lonelyData, nonLonelyData, title }: NGramChartProps) {
+export function NGramChart({ ngramData, ngramType }: NGramChartProps) {
+  const lonelyData = ngramType === 'unigrams' ? ngramData.lonely_unigrams : ngramData.lonely_bigrams
+  const nonLonelyData = ngramType === 'unigrams' ? ngramData.non_lonely_unigrams : ngramData.non_lonely_bigrams
+  const title = ngramType === 'unigrams' ? 'Top 20 Unigrams' : 'Top 20 Bigrams'
+  
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">{title}</h3>
