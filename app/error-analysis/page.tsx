@@ -72,10 +72,12 @@ function ErrorAnalysisContent() {
   useEffect(() => {
     if (!selectedModel) return
 
+    const model = selectedModel // Type narrowing for TypeScript
+
     async function fetchDetail() {
       try {
         setDetailLoading(true)
-        const detail = await getErrorDetail(selectedModel)
+        const detail = await getErrorDetail(model)
         setErrorDetail(detail)
       } catch (err) {
         console.error('Failed to fetch error detail:', err)
