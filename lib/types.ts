@@ -299,13 +299,18 @@ export interface FeatureRanked {
   abs_rank: number
 }
 
+export interface CoefficientEntry {
+  feature: string
+  coefficient: number
+}
+
 export interface LrCoefficients {
   representation: string
   model: string
   n_features_total: number
   top_n: number
-  lonely_indicators: { feature: string; coefficient: number }[]
-  non_lonely_indicators: { feature: string; coefficient: number }[]
+  lonely_indicators: CoefficientEntry[]
+  non_lonely_indicators: CoefficientEntry[]
   features_ranked?: FeatureRanked[]
 }
 
