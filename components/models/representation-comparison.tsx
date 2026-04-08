@@ -11,10 +11,10 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { RepresentationSummary } from '@/lib/types'
+import type { ModelResult } from '@/lib/types'
 
 interface RepresentationComparisonProps {
-  data: RepresentationSummary[]
+  data: ModelResult[]
 }
 
 const COLORS = {
