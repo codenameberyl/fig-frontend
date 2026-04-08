@@ -101,7 +101,7 @@ function InterpretabilityContent() {
       cost: item.computational_cost,
       f1: item.best_f1,
     }
-  }).filter(Boolean)
+  }).filter((card): card is NonNullable<typeof card> => card !== null)
 
   return (
     <>
