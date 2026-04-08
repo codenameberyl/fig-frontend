@@ -17,14 +17,14 @@ export function ErrorExampleCard({ example, type }: ErrorExampleCardProps) {
   const [expanded, setExpanded] = useState(false)
 
   const isFP = type === 'fp'
-  const truncatedText = example.text.slice(0, 300)
-  const needsTruncation = example.text.length > 300
+  const truncatedText = example.original_text.slice(0, 300)
+  const needsTruncation = example.original_text.length > 300
 
   const features = [
     { label: 'Words', value: example.word_count },
-    { label: 'Pronoun', value: example.pronoun_ratio },
-    { label: 'Emotion', value: example.emotion_word_ratio },
-    { label: 'Negation', value: example.negation_ratio },
+    { label: 'Pronoun', value: example.features.pronoun_ratio },
+    { label: 'Emotion', value: example.features.emotion_word_ratio },
+    { label: 'Negation', value: example.features.negation_ratio },
   ].filter((f) => f.value !== undefined)
 
   return (
@@ -54,7 +54,7 @@ export function ErrorExampleCard({ example, type }: ErrorExampleCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-foreground leading-relaxed">
-          {expanded ? example.text : truncatedText}
+          {expanded ? example.original_text : truncatedText}
           {!expanded && needsTruncation && '...'}
         </p>
 
