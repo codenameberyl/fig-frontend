@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import {
   BarChart,
@@ -6,51 +6,124 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   Legend,
-} from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+  ResponsiveContainer,
+} from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import type { LinguisticStats } from '@/lib/types'
 
-const featureData = [
-  { feature: "First Person Ratio", lonely: 0.42, nonLonely: 0.28 },
-  { feature: "Social Word Ratio", lonely: 0.18, nonLonely: 0.35 },
-  { feature: "Question Marks", lonely: 0.15, nonLonely: 0.08 },
-  { feature: "Avg Sentence Len", lonely: 0.72, nonLonely: 0.58 },
-  { feature: "Sentiment Polarity", lonely: -0.32, nonLonely: 0.45 },
-]
+interface LinguisticFeaturesChartProps {
+  data: LinguisticStats
+}
 
-export function LinguisticFeaturesChart() {
+const LONELY_COLOR = '#f43f5e'
+const NON_LONELY_COLOR = '#4C9BE8'
+
+// Tooltip style per spec
+const tooltipStyle = {
+  backgroundColor: '#1e1e2e',
+  border: '1px solid #2e2e3e',
+  borderRadius: '8px',
+}
+const labelStyle = { color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace' }
+const itemStyle = { color: '#ffffff' }
+
+export function LinguisticFeaturesChart({ data }: LinguisticFeaturesChartProps) {
+  // Transform API response to chart format
+  const chartData = Object.entries(data).map(([feature, stats]) => {
+    const lonelyMean = stats.lonely.mean
+    const nonLonelyMean = stats.non_lonely.mean
+    const diff = lonelyMean - nonLonelyMean
+    
+    return {
+      feature: feature
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
+      featureKey: feature,
+      Lonely: lonelyMean,
+      'Non-Lonely': nonLonelyMean,
+      diff,
+      diffLabel: diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3),
+      diffDirection: diff > 0 ? 'up' : 'down',
+    }
+  })
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Linguistic Feature Comparison</CardTitle>
-        <CardDescription>
-          Normalized feature values by class
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            lonely: { label: "Lonely", color: "#f472b6" },
-            nonLonely: { label: "Non-Lonely", color: "#22d3ee" },
-          }}
-          className="h-[300px] w-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={featureData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="feature" tick={{ fontSize: 10 }} angle={-15} textAnchor="end" height={60} />
-              <YAxis domain={[-0.5, 1]} />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Legend />
-              <Bar dataKey="lonely" name="Lonely" fill="#f472b6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="nonLonely" name="Non-Lonely" fill="#22d3ee" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Linguistic Feature Comparison (Mean Values)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[500px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 20, right: 30, left: 140, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                <XAxis
+                  type="number"
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  tickFormatter={(value) => value.toFixed(2)}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="feature"
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  width={130}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  labelStyle={labelStyle}
+                  itemStyle={itemStyle}
+                  formatter={(value: number) => value.toFixed(4)}
+                />
+                <Legend />
+                <Bar
+                  dataKey="Non-Lonely"
+                  fill={NON_LONELY_COLOR}
+                  radius={[0, 4, 4, 0]}
+                />
+                <Bar
+                  dataKey="Lonely"
+                  fill={LONELY_COLOR}
+                  radius={[0, 4, 4, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Difference Badges */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Lonely vs Non-Lonely Difference</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {chartData.map((item) => (
+              <Badge 
+                key={item.featureKey}
+                variant="outline"
+                className={`font-mono text-xs ${
+                  item.diffDirection === 'up' 
+                    ? 'border-[#f43f5e]/50 text-[#f43f5e]' 
+                    : 'border-[#4C9BE8]/50 text-[#4C9BE8]'
+                }`}
+              >
+                {item.feature}: {item.diffDirection === 'up' ? '▲' : '▼'} {item.diffLabel}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

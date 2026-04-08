@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import {
   LineChart,
@@ -6,108 +6,144 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
-  Legend,
+  ResponsiveContainer,
   ReferenceLine,
-} from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+  Scatter,
+  ScatterChart,
+  ComposedChart,
+} from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import type { RocPoint } from '@/lib/types'
 
-// Generate ROC curve points for each model
-const rocData = Array.from({ length: 101 }, (_, i) => {
-  const fpr = i / 100
-  return {
-    fpr,
-    logReg: Math.min(1, Math.pow(fpr, 0.65) * 1.2),
-    svm: Math.min(1, Math.pow(fpr, 0.6) * 1.25),
-    rf: Math.min(1, Math.pow(fpr, 0.55) * 1.3),
-    bert: Math.min(1, Math.pow(fpr, 0.5) * 1.35),
-    random: fpr,
-  }
-})
+interface ROCCurveChartProps {
+  points: RocPoint[]
+  auc: number
+  optimalThreshold?: number
+  optimalFpr?: number
+  optimalTpr?: number
+}
 
-export function ROCCurveChart() {
+export function ROCCurveChart({
+  points,
+  auc,
+  optimalThreshold,
+  optimalFpr,
+  optimalTpr,
+}: ROCCurveChartProps) {
+  const chartData = points.map((p) => ({
+    fpr: p.fpr,
+    tpr: p.tpr,
+    threshold: p.threshold,
+  }))
+
+  // Add diagonal reference line data
+  const diagonalData = [
+    { fpr: 0, tpr: 0 },
+    { fpr: 1, tpr: 1 },
+  ]
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>ROC Curves</CardTitle>
-        <CardDescription>
-          Receiver Operating Characteristic curves for all models
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">ROC Curve</CardTitle>
+        <Badge variant="outline" className="font-mono">
+          AUC = {auc.toFixed(3)}
+        </Badge>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          config={{
-            logReg: { label: "Logistic Regression (AUC: 0.91)", color: "#94a3b8" },
-            svm: { label: "SVM (AUC: 0.92)", color: "#a78bfa" },
-            rf: { label: "Random Forest (AUC: 0.94)", color: "#22d3ee" },
-            bert: { label: "BERT (AUC: 0.96)", color: "#6366f1" },
-          }}
-          className="h-[400px] w-full"
-        >
+        <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rocData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="fpr" 
-                label={{ value: "False Positive Rate", position: "bottom", offset: -5 }}
-                tickFormatter={(value) => value.toFixed(1)}
-              />
-              <YAxis 
-                label={{ value: "True Positive Rate", angle: -90, position: "insideLeft" }}
+            <ComposedChart
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis
+                type="number"
+                dataKey="fpr"
                 domain={[0, 1]}
+                stroke="var(--muted-foreground)"
+                fontSize={12}
+                tickFormatter={(value) => value.toFixed(1)}
+                label={{
+                  value: 'False Positive Rate',
+                  position: 'insideBottom',
+                  offset: -10,
+                  style: { fill: 'var(--muted-foreground)', fontSize: 11 },
+                }}
               />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Legend verticalAlign="top" height={36} />
-              <ReferenceLine 
-                stroke="#475569" 
+              <YAxis
+                type="number"
+                domain={[0, 1]}
+                stroke="var(--muted-foreground)"
+                fontSize={12}
+                tickFormatter={(value) => value.toFixed(1)}
+                label={{
+                  value: 'True Positive Rate',
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fill: 'var(--muted-foreground)', fontSize: 11 },
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                }}
+                labelStyle={{ color: 'var(--foreground)' }}
+                formatter={(value: number, name: string) => [
+                  value.toFixed(3),
+                  name === 'tpr' ? 'TPR' : name === 'fpr' ? 'FPR' : 'Threshold',
+                ]}
+              />
+              {/* Diagonal reference line */}
+              <Line
+                data={diagonalData}
+                type="linear"
+                dataKey="tpr"
+                stroke="var(--muted-foreground)"
                 strokeDasharray="5 5"
-                segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]}
-              />
-              <Line
-                type="monotone"
-                dataKey="random"
-                name="Random (AUC: 0.50)"
-                stroke="#475569"
-                strokeDasharray="5 5"
                 dot={false}
+                isAnimationActive={false}
               />
+              {/* ROC Curve */}
               <Line
+                data={chartData}
                 type="monotone"
-                dataKey="logReg"
-                name="Log. Reg. (AUC: 0.91)"
-                stroke="#94a3b8"
+                dataKey="tpr"
+                stroke="oklch(0.55 0.25 285)"
                 strokeWidth={2}
                 dot={false}
               />
-              <Line
-                type="monotone"
-                dataKey="svm"
-                name="SVM (AUC: 0.92)"
-                stroke="#a78bfa"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="rf"
-                name="RF (AUC: 0.94)"
-                stroke="#22d3ee"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="bert"
-                name="BERT (AUC: 0.96)"
-                stroke="#6366f1"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
+              {/* Optimal point */}
+              {optimalFpr !== undefined && optimalTpr !== undefined && (
+                <Scatter
+                  data={[{ fpr: optimalFpr, tpr: optimalTpr }]}
+                  fill="oklch(0.65 0.2 15)"
+                  shape="circle"
+                />
+              )}
+            </ComposedChart>
           </ResponsiveContainer>
-        </ChartContainer>
+        </div>
+
+        {optimalThreshold !== undefined && (
+          <div className="mt-4 p-3 rounded-lg bg-muted/50 text-center">
+            <span className="text-sm text-muted-foreground">
+              Optimal Threshold:{' '}
+              <span className="font-mono font-semibold text-foreground">
+                {optimalThreshold.toFixed(3)}
+              </span>
+              {optimalFpr !== undefined && optimalTpr !== undefined && (
+                <span className="text-muted-foreground">
+                  {' '}(FPR: {optimalFpr.toFixed(3)}, TPR: {optimalTpr.toFixed(3)})
+                </span>
+              )}
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

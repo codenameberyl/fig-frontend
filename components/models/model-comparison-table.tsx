@@ -1,80 +1,186 @@
-"use client"
+'use client'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Trophy } from "lucide-react"
+import { useState } from 'react'
+import Link from 'next/link'
+import { ArrowUpDown, Trophy } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import type { ModelResult } from '@/lib/types'
 
-const modelData = [
-  { model: "Logistic Regression", accuracy: 0.842, precision: 0.821, recall: 0.856, f1: 0.838, best: false },
-  { model: "Linear SVM", accuracy: 0.856, precision: 0.843, recall: 0.862, f1: 0.852, best: false },
-  { model: "Random Forest", accuracy: 0.871, precision: 0.859, recall: 0.878, f1: 0.868, best: false },
-  { model: "BERT Transformer", accuracy: 0.894, precision: 0.887, recall: 0.896, f1: 0.891, best: true },
-]
+interface ModelComparisonTableProps {
+  results: ModelResult[]
+  bestF1: number
+  showTestMetrics?: boolean
+}
 
-export function ModelComparisonTable() {
+type SortKey = 'representation' | 'model' | 'accuracy' | 'precision' | 'recall' | 'f1' | 'roc_auc'
+type SortDirection = 'asc' | 'desc'
+
+export function ModelComparisonTable({
+  results,
+  bestF1,
+  showTestMetrics = false,
+}: ModelComparisonTableProps) {
+  const [sortKey, setSortKey] = useState<SortKey>('f1')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('desc')
+    }
+  }
+
+  const sortedResults = [...results].sort((a, b) => {
+    let aVal: string | number | undefined
+    let bVal: string | number | undefined
+
+    if (showTestMetrics) {
+      aVal = sortKey === 'representation' ? a.representation
+        : sortKey === 'model' ? a.model
+        : sortKey === 'accuracy' ? a.test_accuracy
+        : sortKey === 'precision' ? a.test_precision
+        : sortKey === 'recall' ? a.test_recall
+        : sortKey === 'f1' ? a.test_f1
+        : a.test_roc_auc
+
+      bVal = sortKey === 'representation' ? b.representation
+        : sortKey === 'model' ? b.model
+        : sortKey === 'accuracy' ? b.test_accuracy
+        : sortKey === 'precision' ? b.test_precision
+        : sortKey === 'recall' ? b.test_recall
+        : sortKey === 'f1' ? b.test_f1
+        : b.test_roc_auc
+    } else {
+      aVal = sortKey === 'representation' ? a.representation
+        : sortKey === 'model' ? a.model
+        : a[sortKey]
+
+      bVal = sortKey === 'representation' ? b.representation
+        : sortKey === 'model' ? b.model
+        : b[sortKey]
+    }
+
+    if (aVal === undefined) return 1
+    if (bVal === undefined) return -1
+
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      return sortDirection === 'asc'
+        ? aVal.localeCompare(bVal)
+        : bVal.localeCompare(aVal)
+    }
+
+    return sortDirection === 'asc'
+      ? (aVal as number) - (bVal as number)
+      : (bVal as number) - (aVal as number)
+  })
+
+  const SortButton = ({ column, label }: { column: SortKey; label: string }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8 data-[state=open]:bg-accent"
+      onClick={() => handleSort(column)}
+    >
+      {label}
+      <ArrowUpDown className="ml-2 h-4 w-4" />
+    </Button>
+  )
+
+  const formatMetric = (value: number | undefined) => {
+    if (value === undefined) return '-'
+    return value.toFixed(3)
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Model Comparison</CardTitle>
-        <CardDescription>
-          Performance metrics across all evaluated classifiers
-        </CardDescription>
+        <CardTitle className="text-base">All Model Results</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Model</TableHead>
-              <TableHead className="text-right">Accuracy</TableHead>
-              <TableHead className="text-right">Precision</TableHead>
-              <TableHead className="text-right">Recall</TableHead>
-              <TableHead className="text-right">F1 Score</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {modelData.map((row) => (
-              <TableRow key={row.model} className={row.best ? "bg-primary/5" : ""}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{row.model}</span>
-                    {row.best && (
-                      <Badge className="bg-primary/10 text-primary hover:bg-primary/20">
-                        <Trophy className="mr-1 size-3" />
-                        Best
-                      </Badge>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="text-left font-medium px-4 py-3">
+                  <SortButton column="representation" label="Representation" />
+                </th>
+                <th className="text-left font-medium px-4 py-3">
+                  <SortButton column="model" label="Model" />
+                </th>
+                <th className="text-right font-medium px-4 py-3">
+                  <SortButton column="accuracy" label="Accuracy" />
+                </th>
+                <th className="text-right font-medium px-4 py-3">
+                  <SortButton column="precision" label="Precision" />
+                </th>
+                <th className="text-right font-medium px-4 py-3">
+                  <SortButton column="recall" label="Recall" />
+                </th>
+                <th className="text-right font-medium px-4 py-3">
+                  <SortButton column="f1" label="F1" />
+                </th>
+                <th className="text-right font-medium px-4 py-3">
+                  <SortButton column="roc_auc" label="ROC-AUC" />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedResults.map((result) => {
+                const f1 = showTestMetrics ? result.test_f1 : result.f1
+                const isBest = f1 === bestF1
+                const modelKey = `${result.representation}_${result.model.toLowerCase().replace(/ /g, '_')}`
+
+                return (
+                  <tr
+                    key={modelKey}
+                    className={cn(
+                      'border-b border-border transition-colors hover:bg-muted/50',
+                      isBest && 'bg-primary/5 hover:bg-primary/10'
                     )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {(row.accuracy * 100).toFixed(1)}%
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {row.precision.toFixed(3)}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {row.recall.toFixed(3)}
-                </TableCell>
-                <TableCell className="text-right font-mono font-semibold text-primary">
-                  {row.f1.toFixed(3)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  >
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {result.representation}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/models/${modelKey}`}
+                        className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+                      >
+                        {isBest && <Trophy className="h-4 w-4 text-yellow-500" />}
+                        {result.model}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                      {formatMetric(showTestMetrics ? result.test_accuracy : result.accuracy)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                      {formatMetric(showTestMetrics ? result.test_precision : result.precision)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                      {formatMetric(showTestMetrics ? result.test_recall : result.recall)}
+                    </td>
+                    <td className={cn(
+                      'px-4 py-3 text-right font-mono tabular-nums font-semibold',
+                      isBest && 'text-primary'
+                    )}>
+                      {formatMetric(f1)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                      {formatMetric(showTestMetrics ? result.test_roc_auc : result.roc_auc)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   )
