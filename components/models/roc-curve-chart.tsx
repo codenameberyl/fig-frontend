@@ -93,8 +93,8 @@ export function ROCCurveChart({
                   borderRadius: '8px',
                 }}
                 labelStyle={{ color: 'var(--foreground)' }}
-                formatter={(value: number, name: string) => [
-                  value.toFixed(3),
+                formatter={(value: any, name: any) => [
+                  typeof value === 'number' ? value.toFixed(3) : String(value),
                   name === 'tpr' ? 'TPR' : name === 'fpr' ? 'FPR' : 'Threshold',
                 ]}
               />
