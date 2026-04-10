@@ -97,7 +97,7 @@ export function ClassDistributionChart({ data }: ClassDistributionChartProps) {
                   position="top" 
                   fill="var(--muted-foreground)" 
                   fontSize={11}
-                  formatter={(v: number) => v.toLocaleString()}
+                  formatter={(v: any) => typeof v === 'number' ? v.toLocaleString() : v}
                 />
               </Bar>
               <Bar 
@@ -110,7 +110,7 @@ export function ClassDistributionChart({ data }: ClassDistributionChartProps) {
                   position="top" 
                   fill="var(--muted-foreground)" 
                   fontSize={11}
-                  formatter={(v: number) => v.toLocaleString()}
+                  formatter={(v: any) => typeof v === 'number' ? v.toLocaleString() : v}
                 />
               </Bar>
             </BarChart>
