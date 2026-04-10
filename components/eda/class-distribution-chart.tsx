@@ -79,8 +79,9 @@ export function ClassDistributionChart({ data }: ClassDistributionChartProps) {
                 contentStyle={tooltipStyle}
                 labelStyle={labelStyle}
                 itemStyle={itemStyle}
-                formatter={(value: number, name: string, props) => {
-                  const total = props.payload.Lonely + props.payload['Non-Lonely']
+                formatter={(value: any, name: any, item: any) => {
+                  if (typeof value !== 'number') return value
+                  const total = item.payload.Lonely + item.payload['Non-Lonely']
                   const pct = ((value / total) * 100).toFixed(1)
                   return [`${value.toLocaleString()} (${pct}%)`, name]
                 }}
