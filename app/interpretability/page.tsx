@@ -161,9 +161,8 @@ function InterpretabilityContent() {
                   />
                   <Tooltip
                     {...TOOLTIP_STYLE}
-                    formatter={(value: number | undefined, name: string) => [
-                      typeof value === 'number' ? value.toFixed(3) : 'N/A',
-                      name === 'f1' ? 'F1 Score' : 'Interpretability',
+                    formatter={(value: any) => [
+                      typeof value === 'number' ? value.toFixed(3) : String(value),
                     ]}
                   />
                   <Scatter
