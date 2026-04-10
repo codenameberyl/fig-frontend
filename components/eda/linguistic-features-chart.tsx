@@ -82,7 +82,7 @@ export function LinguisticFeaturesChart({ data }: LinguisticFeaturesChartProps) 
                   contentStyle={tooltipStyle}
                   labelStyle={labelStyle}
                   itemStyle={itemStyle}
-                  formatter={(value: number) => value.toFixed(4)}
+                  formatter={(value: any) => typeof value === 'number' ? value.toFixed(4) : value}
                 />
                 <Legend />
                 <Bar
