@@ -69,8 +69,8 @@ export function RepresentationComparison({ data }: RepresentationComparisonProps
                   borderRadius: '8px',
                 }}
                 labelStyle={{ color: 'var(--foreground)' }}
-                formatter={(value: number, name: string, props) => [
-                  value.toFixed(3),
+                formatter={(value: any, name: any) => [
+                  typeof value === 'number' ? value.toFixed(3) : value,
                   name,
                 ]}
                 labelFormatter={(label, payload) => {
