@@ -17,7 +17,7 @@ import {
   Sliders,
 } from "lucide-react"
 import { getStatus } from "@/lib/api"
-import { NAV_STEP_MAP } from "@/lib/utils"
+import { NAV_STEP_MAP, PIPELINE_STEP_LABELS } from "@/lib/utils"
 import type { StatusResponse } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -159,7 +159,7 @@ export function AppSidebar() {
               ))}
           </div>
           <p className="text-[10px] text-slate-600 mt-1 font-mono">
-            {status.completed_steps.length}/{Object.keys(NAV_STEP_MAP).filter(k => NAV_STEP_MAP[k]).length} complete
+            {status.completed_steps.length}/{Object.keys(PIPELINE_STEP_LABELS).length} complete
           </p>
         </div>
       )}
