@@ -183,10 +183,10 @@ export default function ErrorAnalysisPage() {
       </SectionCard>
 
       {/* Qualitative observations */}
-      {summary?.qualitative_patterns?.observations?.length > 0 && summary?.qualitative_patterns && (
+      {summary && summary.qualitative_patterns && summary.qualitative_patterns.observations && summary.qualitative_patterns.observations.length > 0 && (
         <SectionCard title="Qualitative Patterns" description={`Analysed ${summary.qualitative_patterns.n_fp_analysed} FPs and ${summary.qualitative_patterns.n_fn_analysed} FNs`} className="mb-6">
           <div className="space-y-3">
-            {summary.qualitative_patterns.observations?.map((obs, i) => (
+            {summary.qualitative_patterns.observations.map((obs, i) => (
               <div key={i} className="flex gap-3 p-4 bg-[#0a0a0f] border-l-2 border-violet-600/40 rounded-r-xl">
                 <Lightbulb className="h-4 w-4 text-violet-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-slate-400 leading-relaxed">{obs}</p>
@@ -203,7 +203,7 @@ export default function ErrorAnalysisPage() {
       </div>
 
       {/* Confusion overlap */}
-      {summary?.confusion_overlap?.top_confused_posts?.length > 0 && summary?.confusion_overlap && (
+      {summary && summary.confusion_overlap && summary.confusion_overlap.top_confused_posts && summary.confusion_overlap.top_confused_posts.length > 0 && (
         <SectionCard title="Most Confused Posts" description="Posts misclassified by the most models — likely the hardest examples" className="mb-6">
           <PlotImage src={plotUrl("models", "error_analysis_confusion_overlap.png")} alt="Confusion overlap" caption="error_analysis_confusion_overlap.png" className="mb-4" />
           <div className="overflow-x-auto">
@@ -216,7 +216,7 @@ export default function ErrorAnalysisPage() {
                 </tr>
               </thead>
               <tbody>
-                {summary.confusion_overlap.top_confused_posts?.slice(0, 10).map(post => (
+                {summary.confusion_overlap.top_confused_posts.slice(0, 10).map(post => (
                   <tr key={post.unique_id} className="border-b border-[#1e1e2e]/50">
                     <td className="py-2 px-3 font-mono text-slate-400">{post.unique_id}</td>
                     <td className="py-2 px-3">
