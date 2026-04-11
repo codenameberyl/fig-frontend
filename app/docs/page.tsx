@@ -124,7 +124,7 @@ export default function DocsPage() {
               fine-tuned DistilBERT model.
             </p>
             <div className="flex gap-3">
-              <a href="https://github.com/your-username/fig-loneliness" target="_blank" rel="noopener noreferrer"
+              <a href="https://github.com/codenameberyl/fig-loneliness-airdp10" target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2 border border-[#1e1e2e] rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:border-[#2e2e3e] transition-all">
                 <Github className="h-4 w-4" /> GitHub
               </a>

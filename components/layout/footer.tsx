@@ -19,7 +19,7 @@ export function Footer() {
           {/* Links */}
           <div className="flex flex-wrap items-center gap-6 text-xs text-slate-500">
             <a
-              href="https://github.com/your-username/fig-loneliness"
+              href="https://github.com/codenameberyl/fig-loneliness-airdp10"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 hover:text-slate-300 transition-colors"
@@ -37,7 +37,7 @@ export function Footer() {
               HuggingFace Dataset
             </a>
             <a
-              href="https://your-space.hf.space/docs"
+              href="https://codenameberyl-fig-lone.hf.space/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 hover:text-slate-300 transition-colors"

@@ -132,9 +132,9 @@ export function AppSidebar() {
 
         {/* External links */}
         <div className="px-3 pt-2 pb-1 space-y-1.5">
-          <ExternalLink href="https://github.com/your-username/fig-loneliness" icon={GitBranch} label="GitHub" />
+          <ExternalLink href="https://github.com/codenameberyl/fig-loneliness-airdp10" icon={GitBranch} label="GitHub" />
           <ExternalLink href="https://huggingface.co/datasets/FIG-Loneliness/FIG-Loneliness" icon={FlaskConical} label="HuggingFace Dataset" />
-          <ExternalLink href="https://your-space.hf.space/docs" icon={BookOpen} label="API Docs" />
+          <ExternalLink href="https://codenameberyl-fig-lone.hf.space/docs" icon={BookOpen} label="API Docs" />
         </div>
       </div>
 
