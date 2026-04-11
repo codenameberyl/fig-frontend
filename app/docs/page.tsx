@@ -319,7 +319,7 @@ trainer = Trainer(
             <h2 className="text-lg font-bold text-white mb-4">API Reference</h2>
             <p className="text-sm text-slate-400 mb-4">
               The FastAPI backend is a read-only results server. All endpoints return pre-computed results from the pipeline.
-              The API base URL is <code className="font-mono text-violet-400 text-xs bg-violet-600/10 px-1.5 py-0.5 rounded">{API}</code>.
+              The API base URL is <code className="font-mono text-violet-400 text-xs bg-violet-600/10 px-1.5 py-0.5 rounded">{API.replace("/api", "/docs")}</code>.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
