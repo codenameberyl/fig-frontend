@@ -236,7 +236,7 @@ export default function EDAPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" horizontal={false} />
                       <XAxis type="number" stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} tickFormatter={v => fmt(v, 3)} />
                       <YAxis type="category" dataKey="feature" stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} width={105} />
-                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 4)} />
+                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
                       <Legend wrapperStyle={{ color: "#e2e8f0", fontSize: 12 }} />
                       <Bar dataKey="nonLonely" name="Non-Lonely" fill={NON_LONELY_COLOR} radius={[0, 4, 4, 0]} barSize={10} />
                       <Bar dataKey="lonely" name="Lonely" fill={LONELY_COLOR} radius={[0, 4, 4, 0]} barSize={10} />
