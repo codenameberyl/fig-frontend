@@ -68,7 +68,7 @@ function SidebarNav({
   return (
     <TooltipProvider delayDuration={0}>
       {/* Logo */}
-      <SidebarHeader className="border-b border-[#1e1e2e] px-4 py-4">
+      <SidebarHeader className="border-b border-[#1e1e2e] px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
             <Brain className="h-4 w-4 text-violet-400" />
@@ -82,6 +82,16 @@ function SidebarNav({
             </div>
           )}
         </div>
+        <SidebarTrigger
+          className={cn(
+            "flex items-center gap-2 text-xs text-slate-600",
+            "hover:text-slate-400 rounded-lg hover:bg-white/5 transition-all",
+            "border border-transparent hover:border-[#1e1e2e] h-8 w-8 flex-shrink-0",
+            "justify-center px-0"
+          )}
+        >
+          <PanelLeft className="h-3.5 w-3.5" />
+        </SidebarTrigger>
       </SidebarHeader>
 
       {/* Main navigation */}
@@ -281,21 +291,6 @@ function SidebarNav({
             )}
           </div>
         )}
-
-        {/* Collapse / expand toggle */}
-        <div className="pt-2 border-t border-[#1e1e2e]/50 mt-1">
-          <SidebarTrigger
-            className={cn(
-              "w-full flex items-center gap-2 text-xs text-slate-600",
-              "hover:text-slate-400 rounded-lg hover:bg-white/5 transition-all",
-              "border border-transparent hover:border-[#1e1e2e] h-9",
-              isCollapsed ? "justify-center px-0" : "justify-start px-2"
-            )}
-          >
-            <PanelLeft className="h-3.5 w-3.5 flex-shrink-0" />
-            {!isCollapsed && <span className="font-mono">Collapse sidebar</span>}
-          </SidebarTrigger>
-        </div>
       </SidebarFooter>
     </TooltipProvider>
   )
