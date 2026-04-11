@@ -109,60 +109,49 @@ function SidebarNav({
       <SidebarContent className="py-4 flex-1 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-2">
               {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
                 const active =
                   pathname === href ||
                   (href !== "/" && pathname.startsWith(href))
-
                 const done = step ? completed.has(step) : true
 
-                return (
-                  <SidebarMenuItem key={href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      className={cn(
-                        "relative transition-all h-9 overflow-hidden",
-                        active
-                          ? "bg-slate-800/50 text-slate-100"
-                          : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                const menuBtn = (
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active}
+                    className={cn(
+                      "relative transition-all h-9 group",
+                      active
+                        ? "bg-violet-600/15 text-violet-300 hover:bg-violet-600/20 hover:text-violet-200"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                    )}
+                  >
+                    <Link href={href} className="flex items-center gap-3 w-full relative">
+                      {active && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.6)]" />
                       )}
-                    >
-                      <Link href={href} className="flex items-center gap-3 w-full px-3">
-                        
-                        {/* 🔥 ACTIVE LEFT INDICATOR */}
-                        {active && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,212,255,0.5)]" />
+                      <Icon
+                        className={cn(
+                          "h-4 w-4 flex-shrink-0",
+                          active ? "text-violet-400" : "text-slate-500"
                         )}
-
-                        {/* ICON */}
-                        <Icon
-                          className={cn(
-                            "h-4 w-4 flex-shrink-0",
-                            active ? "text-cyan-400" : "text-slate-500"
-                          )}
-                        />
-
-                        {/* TEXT (hidden when collapsed) */}
-                        {!isCollapsed && (
-                          <>
-                            <span className="flex-1 truncate text-sm">{label}</span>
-
-                            {/* STATUS DOT */}
-                            <span
-                              className={cn(
-                                "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                                done ? "bg-emerald-400" : "bg-slate-700"
-                              )}
-                            />
-                          </>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                      />
+                      {!isCollapsed && (
+                        <>
+                          <span className="flex-1 truncate text-sm">{label}</span>
+                          {/* Status dot */}
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                              done ? "bg-emerald-400" : "bg-slate-700"
+                            )}
+                          />
+                        </>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
                 )
-              })}
 
                 return (
                   <SidebarMenuItem key={href}>
