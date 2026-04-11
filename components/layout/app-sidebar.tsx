@@ -114,7 +114,7 @@ function SidebarNav({
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-2">
               {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
                 const active =
                   pathname === href ||
