@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts"
 import { getModelResults, getBestPerRep, plotUrl } from "@/lib/api"
 import type { ModelResult, ModelResultsResponse } from "@/lib/types"
@@ -201,7 +201,7 @@ export default function ModelsPage() {
                 <Legend wrapperStyle={{ color: "#e2e8f0", fontSize: 11 }} />
                 <Bar dataKey="F1" fill="#7c3aed" radius={[4, 4, 0, 0]}>
                   {radarData.map((r, i) => (
-                    <Bar.Rectangle key={i} fill={REP_COLOURS[bestPerRep[i]?.representation ?? ""] ?? "#7c3aed"} />
+                    <Cell key={i} fill={REP_COLOURS[bestPerRep[i]?.representation ?? ""] ?? "#7c3aed"} />
                   ))}
                 </Bar>
                 <Bar dataKey="AUC" fill="#06b6d4" radius={[4, 4, 0, 0]} />
