@@ -26,7 +26,7 @@ const REP_INFO = [
   { key: "distilbert", dim: "—", type: "Neural", kind: "Fine-tuned", desc: "End-to-end DistilBERT fine-tuning" },
 ]
 
-type SortKey = keyof Pick<ModelResult, "f1" | "roc_auc" | "accuracy" | "test_f1" | "test_roc_auc">
+type SortKey = keyof Pick<ModelResult, "f1" | "roc_auc" | "accuracy" | "test_f1" | "test_roc_auc" | "test_accuracy">
 
 export default function ModelsPage() {
   const [results, setResults] = useState<ModelResultsResponse | null>(null)
