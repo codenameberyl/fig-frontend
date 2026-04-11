@@ -17,10 +17,10 @@ export interface StatusResponse {
 
 // ─── Dataset ──────────────────────────────────────────────────────────────────
 export interface SplitInfo {
-  n_samples: number
+  total: number
   columns: string[]
-  n_lonely: number
-  n_non_lonely: number
+  lonely: number
+  non_lonely: number
 }
 
 export interface DatasetSummary {
