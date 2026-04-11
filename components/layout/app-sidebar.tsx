@@ -109,7 +109,7 @@ function SidebarNav({
       <SidebarContent className="py-4 flex-1 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-2">
+            <SidebarMenu>
               {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
                 const active =
                   pathname === href ||
@@ -121,26 +121,50 @@ function SidebarNav({
                     asChild
                     isActive={active}
                     className={cn(
-                      "relative transition-all h-9",
+                      "relative h-9 transition-all duration-200 ease-out overflow-hidden",
+                      "flex items-center",
                       active
-                        ? "bg-violet-600/15 text-violet-300 hover:bg-violet-600/20 hover:text-violet-200 border-l-2 border-violet-500 rounded-l-none pl-[calc(0.75rem-2px)]"
+                        ? "bg-violet-600/10 text-violet-300 hover:bg-violet-600/20"
                         : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                     )}
                   >
-                    <Link href={href} className="flex items-center gap-3 w-full">
+                    <Link
+                      href={href}
+                      onClick={() => isMobile && setOpenMobile(false)}
+                      className="flex items-center gap-3 w-full"
+                    >
+                      {active && (
+                        <div
+                          className={cn(
+                            "absolute top-1/2 -translate-y-1/2 rounded-full",
+                            "bg-violet-400 shadow-[0_0_10px_rgba(139,92,246,0.7)]",
+                            "transition-all duration-300 ease-out",
+                            isCollapsed
+                              ? "left-1/2 -translate-x-1/2 h-5 w-[2px]"
+                              : "left-0.5 h-6 w-[2px]"
+                          )}
+                        />
+                      )}
+
+                      {/* Icon */}
                       <Icon
                         className={cn(
-                          "h-4 w-4 flex-shrink-0",
+                          "h-4 w-4 flex-shrink-0 transition-colors duration-200",
                           active ? "text-violet-400" : "text-slate-500"
                         )}
                       />
+
+                      {/* Label + status (hidden when collapsed) */}
                       {!isCollapsed && (
                         <>
-                          <span className="flex-1 truncate text-sm">{label}</span>
+                          <span className="flex-1 truncate text-sm font-medium">
+                            {label}
+                          </span>
+
                           {/* Status dot */}
                           <span
                             className={cn(
-                              "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                              "h-1.5 w-1.5 rounded-full flex-shrink-0 transition-colors",
                               done ? "bg-emerald-400" : "bg-slate-700"
                             )}
                           />
