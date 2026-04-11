@@ -66,10 +66,10 @@ export default function OverviewPage() {
   const hasData = status?.results_available ?? false
 
   const totalLonely = dataset
-    ? Object.values(dataset.splits).reduce((a, s) => a + s.n_lonely, 0)
+    ? Object.values(dataset.splits).reduce((a, s) => a + s.lonely, 0)
     : null
   const totalNonLonely = dataset
-    ? Object.values(dataset.splits).reduce((a, s) => a + s.n_non_lonely, 0)
+    ? Object.values(dataset.splits).reduce((a, s) => a + s.non_lonely, 0)
     : null
 
   const bestTestF1 = models?.results
@@ -239,15 +239,15 @@ export default function OverviewPage() {
               <tbody>
                 {(["train", "validation", "test"] as const).map((split, i) => {
                   const s = dataset.splits[split]
-                  const pct = ((s.n_lonely / s.n_samples) * 100).toFixed(1)
+                  const pct = ((s.lonely / s.total) * 100).toFixed(1)
                   return (
                     <tr key={split} className={`border-b border-[#1e1e2e] ${i === 2 ? "border-0" : ""}`}>
                       <td className="py-3 px-3">
                         <span className="font-mono text-xs px-2 py-0.5 bg-[#1e1e2e] rounded text-violet-400 capitalize">{split}</span>
                       </td>
-                      <td className="py-3 px-3 font-mono text-sm text-white">{fmtCount(s.n_samples)}</td>
-                      <td className="py-3 px-3 font-mono text-sm text-rose-400">{fmtCount(s.n_lonely)}</td>
-                      <td className="py-3 px-3 font-mono text-sm text-blue-400">{fmtCount(s.n_non_lonely)}</td>
+                      <td className="py-3 px-3 font-mono text-sm text-white">{fmtCount(s.total)}</td>
+                      <td className="py-3 px-3 font-mono text-sm text-rose-400">{fmtCount(s.lonely)}</td>
+                      <td className="py-3 px-3 font-mono text-sm text-blue-400">{fmtCount(s.non_lonely)}</td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
                           <div className="h-1.5 w-20 bg-[#1e1e2e] rounded-full overflow-hidden">
