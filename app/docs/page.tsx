@@ -79,6 +79,30 @@ export default function DocsPage() {
     })
   }, [])
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let mostVisible = entries[0]
+        for (let entry of entries) {
+          if (entry.intersectionRatio > mostVisible.intersectionRatio) {
+            mostVisible = entry
+          }
+        }
+        if (mostVisible.isIntersecting || mostVisible.intersectionRatio > 0) {
+          setActiveSection(mostVisible.target.id)
+        }
+      },
+      { threshold: [0, 0.25, 0.5, 0.75, 1] }
+    )
+
+    SECTIONS.forEach(section => {
+      const element = document.getElementById(section)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
     setActiveSection(id)
