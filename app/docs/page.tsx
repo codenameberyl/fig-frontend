@@ -165,10 +165,10 @@ export default function DocsPage() {
                       return (
                         <tr key={s} className="border-b border-[#1e1e2e]/50">
                           <td className="py-3 px-4 font-mono text-xs text-violet-400 capitalize">{s}</td>
-                          <td className="py-3 px-4 font-mono text-xs text-white">{d.n_samples.toLocaleString()}</td>
-                          <td className="py-3 px-4 font-mono text-xs text-rose-400">{d.n_lonely.toLocaleString()}</td>
-                          <td className="py-3 px-4 font-mono text-xs text-blue-400">{d.n_non_lonely.toLocaleString()}</td>
-                          <td className="py-3 px-4 font-mono text-xs text-slate-400">{((d.n_lonely / d.n_samples) * 100).toFixed(1)}%</td>
+                          <td className="py-3 px-4 font-mono text-xs text-white">{d.total.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-rose-400">{d.lonely.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-blue-400">{d.non_lonely.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-400">{((d.lonely / d.total) * 100).toFixed(1)}%</td>
                         </tr>
                       )
                     })}
