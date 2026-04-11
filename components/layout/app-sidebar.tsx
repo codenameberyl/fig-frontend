@@ -316,23 +316,17 @@ function MobileTopBar() {
   return (
     <header className="md:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-[#0a0a0f]/95 backdrop-blur border-b border-[#1e1e2e]">
       <div className="flex items-center gap-2.5">
-        <div className="h-7 w-7 rounded-md bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
+        <div className="h-7 w-7 rounded-md bg-violet-600/20 border border-violet-600/30 flex items-center justify-center">
           <Brain className="h-3.5 w-3.5 text-violet-400" />
         </div>
+
         <div className="flex items-center gap-1.5">
           <Icon className="h-3.5 w-3.5 text-slate-500" />
           <span className="text-sm font-medium text-white">{current.label}</span>
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleSidebar}
-        className="h-8 w-8 text-slate-400 hover:text-slate-200 hover:bg-white/5"
-        aria-label="Open navigation menu"
-      >
-        <PanelLeft className="h-4 w-4" />
-      </Button>
+
+      <SidebarTrigger className="h-8 w-8" />
     </header>
   )
 }
@@ -356,17 +350,22 @@ export function AppSidebar() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Desktop collapsible sidebar */}
-      <Sidebar
-        collapsible="icon"
-        className="border-r border-[#1e1e2e] bg-[#0a0a0f] [--sidebar-background:#0a0a0f]"
-        style={{ "--sidebar-background": "#0a0a0f" } as React.CSSProperties}
-      >
-        <SidebarNav status={status} loading={loading} />
-      </Sidebar>
+      <div className="flex w-full">
+        
+        {/* Sidebar */}
+        <Sidebar
+          collapsible="icon"
+          className="border-r border-[#1e1e2e] bg-[#0a0a0f]"
+        >
+          <SidebarNav status={status} loading={loading} />
+        </Sidebar>
 
-      {/* Mobile hamburger header — only visible on <md */}
-      <MobileTopBarWrapper />
+        {/* Main area (important for mobile + spacing) */}
+        <div className="flex-1 flex flex-col w-full">
+          <MobileTopBarWrapper />
+        </div>
+
+      </div>
     </SidebarProvider>
   )
 }

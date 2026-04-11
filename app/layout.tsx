@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Footer } from "@/components/layout/footer"
+import { SidebarInset } from "@/components/ui/sidebar"
 
 export const metadata: Metadata = {
   title: {
@@ -27,19 +28,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="bg-[#0a0a0f] text-[#e2e8f0] antialiased">
         <AppSidebar />
-        <div
-          className={[
-            "flex flex-col min-h-screen",
-            "md:peer-data-[state=expanded]/sidebar-wrapper:ml-[var(--sidebar-width,16rem)]",
-            "md:peer-data-[state=collapsed]/sidebar-wrapper:ml-[var(--sidebar-width-icon,3rem)]",
-            "transition-[margin] duration-200 ease-linear",
-          ].join(" ")}
-        >
+        <SidebarInset>
           <main className="flex-1 px-4 md:px-6 py-6 md:py-8 max-w-[1300px] w-full mx-auto">
             {children}
           </main>
           <Footer />
-        </div>
+        </SidebarInset>
       </body>
     </html>
   )
