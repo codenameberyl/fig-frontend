@@ -366,29 +366,31 @@ export default function DemoPage() {
       </Callout>
 
       {/* Mode toggle */}
-      <div className="flex items-center gap-2 mb-6">
-        <div className="flex gap-1 p-1 bg-[#111118] border border-[#1e1e2e] rounded-xl">
+      <div className="flex items-center gap-2 mb-6 w-full overflow-x-auto">
+        <div className="flex gap-1 p-1 bg-[#111118] border border-[#1e1e2e] rounded-xl flex-shrink-0">
           <button
             onClick={() => setMode("single")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+            className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm transition-all whitespace-nowrap ${
               mode === "single"
                 ? "bg-violet-600/20 text-violet-300 border border-violet-600/30"
                 : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            <MessageSquare className="h-4 w-4" />
-            Single Post
+            <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Single</span>
+            <span className="sm:hidden">Post</span>
           </button>
           <button
             onClick={() => setMode("batch")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+            className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm transition-all whitespace-nowrap ${
               mode === "batch"
                 ? "bg-violet-600/20 text-violet-300 border border-violet-600/30"
                 : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            <Plus className="h-4 w-4" />
-            Batch (up to 20 posts)
+            <Plus className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Batch (≤20)</span>
+            <span className="sm:hidden">Batch</span>
           </button>
         </div>
       </div>
@@ -400,12 +402,12 @@ export default function DemoPage() {
             ? "Enter one Reddit post to classify"
             : "Add multiple posts individually — each gets its own text input and result"
         }
-        className="max-w-3xl"
+        className="w-full max-w-3xl"
       >
         {mode === "single" ? <SinglePostDemo /> : <BatchPostDemo />}
       </SectionCard>
 
-      <div className="mt-6 max-w-3xl">
+      <div className="mt-6 w-full max-w-3xl">
         <SectionCard title="How it works">
           <ol className="space-y-2 text-xs text-slate-400 font-mono list-none">
             {[

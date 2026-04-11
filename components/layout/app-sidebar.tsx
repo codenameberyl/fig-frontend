@@ -85,7 +85,7 @@ function SidebarNav({
       </SidebarHeader>
 
       {/* Main navigation */}
-      <SidebarContent className="py-3">
+      <SidebarContent className="py-4">
         <SidebarGroup>
           {!isCollapsed && (
             <SidebarGroupLabel className="text-[10px] text-slate-600 uppercase tracking-wider font-mono px-3 mb-1">
@@ -162,10 +162,10 @@ function SidebarNav({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator className="my-2 bg-[#1e1e2e]" />
+        <SidebarSeparator className="my-4 bg-[#1e1e2e]" />
 
         {/* Docs */}
-        <SidebarGroup>
+        <SidebarGroup className="pt-2">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -215,10 +215,10 @@ function SidebarNav({
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-[#1e1e2e] px-3 py-3">
+      <SidebarFooter className="border-t border-[#1e1e2e] px-3 py-4">
         {/* External links */}
         {!isCollapsed && (
-          <div className="space-y-0.5 mb-2">
+          <div className="space-y-0.5 mb-4">
             {EXTERNAL_LINKS.map(({ href, icon: Icon, label }) => (
               <a
                 key={href}
@@ -237,7 +237,7 @@ function SidebarNav({
 
         {/* Pipeline progress bar */}
         {!isCollapsed && (
-          <div className="px-2 py-2 border-t border-[#1e1e2e]">
+          <div className="px-2 py-4 border-t border-[#1e1e2e]">
             <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2 font-mono">
               Pipeline
             </p>
@@ -283,12 +283,12 @@ function SidebarNav({
         )}
 
         {/* Collapse / expand toggle */}
-        <div className="pt-1">
+        <div className="pt-3 border-t border-[#1e1e2e]/50 mt-2">
           <SidebarTrigger
             className={cn(
-              "w-full flex items-center gap-2 text-[11px] text-slate-600",
+              "w-full flex items-center gap-2 text-xs text-slate-600",
               "hover:text-slate-400 rounded-lg hover:bg-white/5 transition-all",
-              "border border-transparent hover:border-[#1e1e2e] h-7",
+              "border border-transparent hover:border-[#1e1e2e] h-9",
               isCollapsed ? "justify-center px-0" : "justify-start px-2"
             )}
           >
