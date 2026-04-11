@@ -241,9 +241,11 @@ export function Tag({
 export function Callout({
   type = "info",
   children,
+  className,
 }: {
   type?: "info" | "warning" | "error" | "success"
   children: React.ReactNode
+  className?: string
 }) {
   const styles = {
     info: "bg-blue-600/5 border-blue-600/20 text-blue-300",
@@ -255,7 +257,8 @@ export function Callout({
     <div
       className={cn(
         "border rounded-lg px-4 py-3 text-sm",
-        styles[type]
+        styles[type],
+        className
       )}
     >
       {children}
