@@ -129,7 +129,7 @@ function SidebarNav({
                   >
                     <Link href={href} className="flex items-center gap-3 w-full relative">
                       {active && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.6)]" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.6)]" />
                       )}
                       <Icon
                         className={cn(
