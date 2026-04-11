@@ -4,187 +4,369 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import {
-  Brain,
-  BarChart3,
-  Database,
-  FlaskConical,
-  GitBranch,
-  Home,
-  Layers,
-  MessageSquare,
-  BookOpen,
-  AlertTriangle,
-  Sliders,
+  Brain, BarChart3, Database, FlaskConical, GitBranch,
+  Home, Layers, MessageSquare, BookOpen, AlertTriangle,
+  Sliders, PanelLeft, ExternalLink as ExternalLinkIcon,
 } from "lucide-react"
 import { getStatus } from "@/lib/api"
-import { NAV_STEP_MAP, PIPELINE_STEP_LABELS } from "@/lib/utils"
+import { PIPELINE_STEP_LABELS, cn } from "@/lib/utils"
 import type { StatusResponse } from "@/lib/types"
-import { cn } from "@/lib/utils"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const NAV_ITEMS = [
-  { href: "/", label: "Overview", icon: Home },
-  { href: "/preprocessing", label: "Preprocessing", icon: Database },
-  { href: "/eda", label: "Exploratory Analysis", icon: BarChart3 },
-  { href: "/models", label: "Model Comparison", icon: Layers },
-  { href: "/interpretability", label: "Interpretability", icon: Sliders },
-  { href: "/error-analysis", label: "Error Analysis", icon: AlertTriangle },
-  { href: "/demo", label: "Live Demo", icon: MessageSquare },
+  { href: "/", label: "Overview", icon: Home, step: "load_dataset" },
+  { href: "/preprocessing", label: "Preprocessing", icon: Database, step: "preprocess" },
+  { href: "/eda", label: "Exploratory Analysis", icon: BarChart3, step: "eda" },
+  { href: "/models", label: "Model Comparison", icon: Layers, step: "train_models" },
+  { href: "/interpretability", label: "Interpretability", icon: Sliders, step: "interpretability" },
+  { href: "/error-analysis", label: "Error Analysis", icon: AlertTriangle, step: "error_analysis" },
+  { href: "/demo", label: "Live Demo", icon: MessageSquare, step: "evaluation" },
 ]
 
-const BOTTOM_ITEMS = [
-  { href: "/docs", label: "Documentation", icon: BookOpen },
+const EXTERNAL_LINKS = [
+  { href: "https://github.com/codenameberyl/fig-loneliness-airdp10", icon: GitBranch, label: "GitHub" },
+  { href: "https://huggingface.co/datasets/FIG-Loneliness/FIG-Loneliness", icon: FlaskConical, label: "HuggingFace" },
+  { href: "https://codenameberyl-fig-lone.hf.space/docs", icon: BookOpen, label: "API Docs" },
 ]
 
-function StatusDot({ done }: { done: boolean }) {
+// ── Sidebar nav content — shared between desktop & mobile ────────────────────
+function SidebarNav({
+  status,
+  loading,
+}: {
+  status: StatusResponse | null
+  loading: boolean
+}) {
+  const pathname = usePathname()
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+  const completed = new Set(status?.completed_steps ?? [])
+
   return (
-    <span
-      className={cn(
-        "inline-block h-1.5 w-1.5 rounded-full flex-shrink-0",
-        done ? "bg-emerald-400" : "bg-slate-600"
-      )}
-    />
+    <TooltipProvider delayDuration={0}>
+      {/* Logo */}
+      <SidebarHeader className="border-b border-[#1e1e2e] px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
+            <Brain className="h-4 w-4 text-violet-400" />
+          </div>
+          {!isCollapsed && (
+            <div className="overflow-hidden">
+              <p className="text-sm font-semibold text-white leading-none truncate">
+                FIG-Loneliness
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5 font-mono">NLP Pipeline</p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      {/* Main navigation */}
+      <SidebarContent className="py-3">
+        <SidebarGroup>
+          {!isCollapsed && (
+            <SidebarGroupLabel className="text-[10px] text-slate-600 uppercase tracking-wider font-mono px-3 mb-1">
+              Navigation
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
+                const active =
+                  pathname === href ||
+                  (href !== "/" && pathname.startsWith(href))
+                const done = step ? completed.has(step) : true
+
+                const menuBtn = (
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active}
+                    className={cn(
+                      "relative transition-all h-9",
+                      active
+                        ? "bg-violet-600/15 text-violet-300 hover:bg-violet-600/20 hover:text-violet-200 border-l-2 border-violet-500 rounded-l-none pl-[calc(0.75rem-2px)]"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                    )}
+                  >
+                    <Link href={href} className="flex items-center gap-3 w-full">
+                      <Icon
+                        className={cn(
+                          "h-4 w-4 flex-shrink-0",
+                          active ? "text-violet-400" : "text-slate-500"
+                        )}
+                      />
+                      {!isCollapsed && (
+                        <>
+                          <span className="flex-1 truncate text-sm">{label}</span>
+                          {/* Status dot */}
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                              done ? "bg-emerald-400" : "bg-slate-700"
+                            )}
+                          />
+                        </>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                )
+
+                return (
+                  <SidebarMenuItem key={href}>
+                    {isCollapsed ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>{menuBtn}</TooltipTrigger>
+                        <TooltipContent
+                          side="right"
+                          className="bg-[#1e1e2e] border-[#2e2e3e] text-slate-200 font-mono text-xs flex items-center gap-2"
+                        >
+                          <span>{label}</span>
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              done ? "bg-emerald-400" : "bg-slate-700"
+                            )}
+                          />
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      menuBtn
+                    )}
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="my-2 bg-[#1e1e2e]" />
+
+        {/* Docs */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                {isCollapsed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === "/docs"}
+                        className={cn(
+                          "transition-all h-9",
+                          pathname === "/docs"
+                            ? "bg-violet-600/15 text-violet-300"
+                            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                        )}
+                      >
+                        <Link href="/docs">
+                          <BookOpen className="h-4 w-4" />
+                        </Link>
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="bg-[#1e1e2e] border-[#2e2e3e] text-slate-200 font-mono text-xs">
+                      Documentation
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/docs"}
+                    className={cn(
+                      "transition-all h-9",
+                      pathname === "/docs"
+                        ? "bg-violet-600/15 text-violet-300"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                    )}
+                  >
+                    <Link href="/docs" className="flex items-center gap-3">
+                      <BookOpen className="h-4 w-4 flex-shrink-0" />
+                      <span className="text-sm">Documentation</span>
+                    </Link>
+                  </SidebarMenuButton>
+                )}
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* Footer */}
+      <SidebarFooter className="border-t border-[#1e1e2e] px-3 py-3">
+        {/* External links */}
+        {!isCollapsed && (
+          <div className="space-y-0.5 mb-2">
+            {EXTERNAL_LINKS.map(({ href, icon: Icon, label }) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[11px] text-slate-600 hover:text-slate-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+              >
+                <Icon className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate flex-1">{label}</span>
+                <ExternalLinkIcon className="h-2.5 w-2.5 opacity-40 flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Pipeline progress bar */}
+        {!isCollapsed && (
+          <div className="px-2 py-2 border-t border-[#1e1e2e]">
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2 font-mono">
+              Pipeline
+            </p>
+            {loading ? (
+              <div className="flex gap-1">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-1.5 w-4 bg-[#1e1e2e]" />
+                ))}
+              </div>
+            ) : status ? (
+              <>
+                <div className="flex gap-1 flex-wrap">
+                  {Object.entries(PIPELINE_STEP_LABELS).map(([key, label]) => {
+                    const done = completed.has(key)
+                    return (
+                      <Tooltip key={key}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className={cn(
+                              "h-1.5 w-4 rounded-full cursor-default transition-colors",
+                              done ? "bg-emerald-500" : "bg-slate-700"
+                            )}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          className="bg-[#1e1e2e] border-[#2e2e3e] text-[10px] font-mono text-slate-200"
+                        >
+                          {label}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-600 mt-1.5 font-mono">
+                  {completed.size} / {Object.keys(PIPELINE_STEP_LABELS).length} complete
+                </p>
+              </>
+            ) : (
+              <p className="text-[10px] text-slate-700 font-mono">No results yet</p>
+            )}
+          </div>
+        )}
+
+        {/* Collapse / expand toggle */}
+        <div className="pt-1">
+          <SidebarTrigger
+            className={cn(
+              "w-full flex items-center gap-2 text-[11px] text-slate-600",
+              "hover:text-slate-400 rounded-lg hover:bg-white/5 transition-all",
+              "border border-transparent hover:border-[#1e1e2e] h-7",
+              isCollapsed ? "justify-center px-0" : "justify-start px-2"
+            )}
+          >
+            <PanelLeft className="h-3.5 w-3.5 flex-shrink-0" />
+            {!isCollapsed && <span className="font-mono">Collapse sidebar</span>}
+          </SidebarTrigger>
+        </div>
+      </SidebarFooter>
+    </TooltipProvider>
   )
 }
 
-export function AppSidebar() {
+// ── Mobile top bar (visible only on small screens) ───────────────────────────
+function MobileTopBar() {
+  const { toggleSidebar } = useSidebar()
   const pathname = usePathname()
+  const current =
+    NAV_ITEMS.find(
+      (item) =>
+        item.href === pathname ||
+        (item.href !== "/" && pathname.startsWith(item.href))
+    ) ?? { label: "Documentation", icon: BookOpen }
+  const Icon = current.icon
+
+  return (
+    <header className="md:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-[#0a0a0f]/95 backdrop-blur border-b border-[#1e1e2e]">
+      <div className="flex items-center gap-2.5">
+        <div className="h-7 w-7 rounded-md bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
+          <Brain className="h-3.5 w-3.5 text-violet-400" />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5 text-slate-500" />
+          <span className="text-sm font-medium text-white">{current.label}</span>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleSidebar}
+        className="h-8 w-8 text-slate-400 hover:text-slate-200 hover:bg-white/5"
+        aria-label="Open navigation menu"
+      >
+        <PanelLeft className="h-4 w-4" />
+      </Button>
+    </header>
+  )
+}
+
+// MobileTopBar needs useSidebar, so it must render inside SidebarProvider
+function MobileTopBarWrapper() {
+  return <MobileTopBar />
+}
+
+// ── Public export — drop this into layout.tsx ─────────────────────────────────
+export function AppSidebar() {
   const [status, setStatus] = useState<StatusResponse | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     getStatus()
       .then(setStatus)
       .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
-  const completed = new Set(status?.completed_steps ?? [])
-
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 bg-[#0a0a0f] border-r border-[#1e1e2e] flex flex-col z-40">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-[#1e1e2e]">
-        <div className="h-8 w-8 rounded-lg bg-violet-600/20 border border-violet-600/30 flex items-center justify-center">
-          <Brain className="h-4 w-4 text-violet-400" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-white leading-none">
-            FIG-Loneliness
-          </p>
-          <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
-            NLP Pipeline
-          </p>
-        </div>
-      </div>
+    <SidebarProvider defaultOpen={true}>
+      {/* Desktop collapsible sidebar */}
+      <Sidebar
+        collapsible="icon"
+        className="border-r border-[#1e1e2e] bg-[#0a0a0f] [--sidebar-background:#0a0a0f]"
+        style={{ "--sidebar-background": "#0a0a0f" } as React.CSSProperties}
+      >
+        <SidebarNav status={status} loading={loading} />
+      </Sidebar>
 
-      {/* Main nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href))
-          const stepKey = NAV_STEP_MAP[href]
-          const done = stepKey ? completed.has(stepKey) : true
-
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group",
-                active
-                  ? "bg-violet-600/15 text-violet-300 border-l-2 border-violet-500"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              )}
-            >
-              <Icon
-                className={cn(
-                  "h-4 w-4 flex-shrink-0",
-                  active ? "text-violet-400" : "text-slate-500 group-hover:text-slate-300"
-                )}
-              />
-              <span className="flex-1 truncate">{label}</span>
-              <StatusDot done={done} />
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* Divider */}
-      <div className="mx-4 border-t border-[#1e1e2e]" />
-
-      {/* Bottom nav */}
-      <div className="px-3 py-3 space-y-0.5">
-        {BOTTOM_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all",
-                active
-                  ? "bg-violet-600/15 text-violet-300"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              )}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              <span>{label}</span>
-            </Link>
-          )
-        })}
-
-        {/* External links */}
-        <div className="px-3 pt-2 pb-1 space-y-1.5">
-          <ExternalLink href="https://github.com/codenameberyl/fig-loneliness-airdp10" icon={GitBranch} label="GitHub" />
-          <ExternalLink href="https://huggingface.co/datasets/FIG-Loneliness/FIG-Loneliness" icon={FlaskConical} label="HuggingFace Dataset" />
-          <ExternalLink href="https://codenameberyl-fig-lone.hf.space/docs" icon={BookOpen} label="API Docs" />
-        </div>
-      </div>
-
-      {/* Pipeline status */}
-      {status && (
-        <div className="px-4 py-3 border-t border-[#1e1e2e]">
-          <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2 font-mono">
-            Pipeline
-          </p>
-          <div className="flex gap-1 flex-wrap">
-            {Object.entries(NAV_STEP_MAP)
-              .filter(([, v]) => v)
-              .map(([, step]) => (
-                <div
-                  key={step}
-                  className={cn(
-                    "h-1.5 w-4 rounded-full",
-                    completed.has(step) ? "bg-emerald-500" : "bg-slate-700"
-                  )}
-                  title={step}
-                />
-              ))}
-          </div>
-          <p className="text-[10px] text-slate-600 mt-1 font-mono">
-            {status.completed_steps.length}/{Object.keys(PIPELINE_STEP_LABELS).length} complete
-          </p>
-        </div>
-      )}
-    </aside>
-  )
-}
-
-function ExternalLink({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-2 text-[11px] text-slate-600 hover:text-slate-400 transition-colors"
-    >
-      <Icon className="h-3 w-3" />
-      <span className="truncate">{label}</span>
-    </a>
+      {/* Mobile hamburger header — only visible on <md */}
+      <MobileTopBarWrapper />
+    </SidebarProvider>
   )
 }

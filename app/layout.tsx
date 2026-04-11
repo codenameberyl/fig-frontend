@@ -26,14 +26,19 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-[#0a0a0f] text-[#e2e8f0] antialiased">
-        <div className="flex min-h-screen">
-          <AppSidebar />
-          <div className="flex-1 ml-60 flex flex-col min-h-screen">
-            <main className="flex-1 px-6 py-8 max-w-[1300px] w-full mx-auto">
-              {children}
-            </main>
-            <Footer />
-          </div>
+        <AppSidebar />
+        <div
+          className={[
+            "flex flex-col min-h-screen",
+            "md:peer-data-[state=expanded]/sidebar-wrapper:ml-[var(--sidebar-width,16rem)]",
+            "md:peer-data-[state=collapsed]/sidebar-wrapper:ml-[var(--sidebar-width-icon,3rem)]",
+            "transition-[margin] duration-200 ease-linear",
+          ].join(" ")}
+        >
+          <main className="flex-1 px-4 md:px-6 py-6 md:py-8 max-w-[1300px] w-full mx-auto">
+            {children}
+          </main>
+          <Footer />
         </div>
       </body>
     </html>
