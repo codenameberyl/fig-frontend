@@ -242,9 +242,9 @@ tokens_no_stop = [                              # 6. Stopword removal
               stopping (patience=2) on validation F1.
             </p>
             {models && (
-              <Callout type="success">
+              <Callout type="success" className="mb-4">
                 Best model: <strong>{repLabel(models.best_representation)}</strong> / <strong>{modelLabel(models.best_model)}</strong> —
-                Validation F1: <strong className="font-mono mb-4">{fmt(models.best_f1, 4)}</strong>
+                Validation F1: <strong className="font-mono">{fmt(models.best_f1, 4)}</strong>
               </Callout>
             )}
             <CodeBlock lang="python" code={`# DistilBERT fine-tuning
