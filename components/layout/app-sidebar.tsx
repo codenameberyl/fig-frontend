@@ -108,11 +108,6 @@ function SidebarNav({
       {/* Main navigation */}
       <SidebarContent className="py-4 flex-1 overflow-y-auto">
         <SidebarGroup>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="text-[10px] text-slate-600 uppercase tracking-wider font-mono px-3 mb-1">
-              Navigation
-            </SidebarGroupLabel>
-          )}
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
               {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
