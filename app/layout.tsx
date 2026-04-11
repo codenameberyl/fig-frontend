@@ -26,7 +26,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-[#0a0a0f] text-[#e2e8f0] antialiased">
-        <AppSidebar />
         <div
           className={[
             "flex flex-col min-h-screen",
@@ -35,6 +34,7 @@ export default function RootLayout({
             "transition-[margin] duration-200 ease-linear",
           ].join(" ")}
         >
+          <AppSidebar />
           <main className="flex-1 px-4 md:px-6 py-6 md:py-8 max-w-[1300px] w-full mx-auto">
             {children}
           </main>
