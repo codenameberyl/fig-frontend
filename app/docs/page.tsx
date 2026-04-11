@@ -1,413 +1,397 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Metadata } from 'next'
-import { cn } from '@/lib/utils'
-import { PageHeader } from '@/components/shared/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { getDatasetSummary, getModelResults, API } from "@/lib/api"
+import type { DatasetSummary, ModelResultsResponse } from "@/lib/types"
+import { repLabel, modelLabel, fmt } from "@/lib/utils"
+import { PageHeader, SectionCard, Tag, Callout } from "@/components/shared"
+import { Copy, Check, ExternalLink, Github } from "lucide-react"
 
-const sections = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'architecture', label: 'Architecture' },
-  { id: 'dataset', label: 'Dataset' },
-  { id: 'preprocessing', label: 'Preprocessing' },
-  { id: 'representations', label: 'Representations' },
-  { id: 'models', label: 'Models' },
-  { id: 'metrics', label: 'Metrics' },
-  { id: 'api', label: 'API Reference' },
-  { id: 'deployment', label: 'Deployment' },
-  { id: 'limitations', label: 'Limitations' },
-  { id: 'citation', label: 'Citation' },
-]
-
-const linguisticFeatures = [
-  { name: 'word_count', description: 'Total number of words in the post' },
-  { name: 'char_count', description: 'Total number of characters' },
-  { name: 'sentence_count', description: 'Number of sentences' },
-  { name: 'avg_word_length', description: 'Average word length in characters' },
-  { name: 'pronoun_ratio', description: 'Ratio of pronouns to total words' },
-  { name: 'first_person_ratio', description: 'Ratio of first-person pronouns (I, me, my)' },
-  { name: 'emotion_word_ratio', description: 'Ratio of emotion-related words' },
-  { name: 'negation_ratio', description: 'Ratio of negation words (not, never, no)' },
-  { name: 'question_ratio', description: 'Ratio of sentences ending in question marks' },
-  { name: 'exclamation_ratio', description: 'Ratio of sentences ending in exclamation marks' },
-  { name: 'hedge_ratio', description: 'Ratio of hedging words (maybe, perhaps, might)' },
-  { name: 'certainty_ratio', description: 'Ratio of certainty words (definitely, always, never)' },
-  { name: 'social_word_ratio', description: 'Ratio of social/relationship words (friend, family)' },
-]
-
-const representations = [
-  { name: 'Linguistic Only', type: 'Sparse', dim: '13', notes: 'Hand-crafted features with full interpretability' },
-  { name: 'TF-IDF', type: 'Sparse', dim: '~15,000', notes: 'Unigram + bigram n-grams, max_df=0.9, min_df=5' },
-  { name: 'TF-IDF + Linguistic', type: 'Sparse', dim: '~15,013', notes: 'Combined sparse features' },
-  { name: 'Word2Vec', type: 'Dense', dim: '200', notes: 'Averaged pre-trained token embeddings' },
-  { name: 'Sentence-BERT', type: 'Dense', dim: '384', notes: 'all-MiniLM-L6-v2 sentence embeddings' },
-  { name: 'DistilBERT', type: 'Dense', dim: '768', notes: 'Fine-tuned distilbert-base-uncased' },
-]
-
-const models = [
-  { name: 'Logistic Regression', reps: 'All sparse & dense', notes: 'L2 regularization, balanced class weights' },
-  { name: 'Random Forest', reps: 'All sparse & dense', notes: '100 estimators, balanced class weights' },
-  { name: 'SVM', reps: 'All sparse & dense', notes: 'RBF kernel, balanced class weights' },
-  { name: 'Fine-tuned DistilBERT', reps: 'DistilBERT only', notes: 'End-to-end training, 3 epochs' },
-]
-
-const apiEndpoints = [
-  { method: 'GET', path: '/api/status', description: 'Get pipeline status and available results' },
-  { method: 'GET', path: '/api/eda/dataset', description: 'Get dataset summary statistics' },
-  { method: 'GET', path: '/api/eda/class_distribution', description: 'Get class distribution by split' },
-  { method: 'GET', path: '/api/eda/length_stats', description: 'Get text length statistics' },
-  { method: 'GET', path: '/api/eda/linguistic_stats', description: 'Get linguistic feature statistics' },
-  { method: 'GET', path: '/api/eda/ngrams', description: 'Get n-gram frequencies' },
-  { method: 'GET', path: '/api/eda/pos_distribution', description: 'Get POS tag distribution' },
-  { method: 'GET', path: '/api/models/results', description: 'Get all model results' },
-  { method: 'GET', path: '/api/models/best_per_representation', description: 'Get best model per representation' },
-  { method: 'GET', path: '/api/models/confusion_matrix/{model_key}', description: 'Get confusion matrix for a model' },
-  { method: 'GET', path: '/api/models/roc_curve/{model_key}', description: 'Get ROC curve data for a model' },
-  { method: 'GET', path: '/api/models/full_report/{model_key}', description: 'Get full classification report' },
-  { method: 'GET', path: '/api/models/interpretability/summary', description: 'Get interpretability summary' },
-  { method: 'GET', path: '/api/models/interpretability/coefficients/{rep}', description: 'Get LR coefficients' },
-  { method: 'GET', path: '/api/models/error_analysis/summary', description: 'Get error analysis summary' },
-  { method: 'GET', path: '/api/models/error_analysis/{model_key}', description: 'Get error examples for a model' },
-  { method: 'POST', path: '/api/predict', description: 'Classify text for loneliness' },
-]
-
-function CodeBlock({ children, language = 'python' }: { children: string; language?: string }) {
+function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
+  const [copied, setCopied] = useState(false)
   return (
-    <pre className="bg-muted/50 border border-border rounded-lg p-4 overflow-x-auto">
-      <code className="text-sm font-mono text-foreground">{children}</code>
-    </pre>
+    <div className="relative bg-[#0d1117] border border-[#1e1e2e] rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[#1e1e2e]">
+        <span className="text-[10px] font-mono text-slate-600">{lang}</span>
+        <button
+          onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+          className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors"
+        >
+          {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <pre className="p-4 text-xs text-slate-300 font-mono overflow-x-auto leading-relaxed">{code}</pre>
+    </div>
   )
 }
 
-export default function DocsPage() {
-  const [activeSection, setActiveSection] = useState('overview')
+const SECTIONS = [
+  "Project Overview", "Dataset", "Preprocessing",
+  "Text Representations", "Models & Training",
+  "Evaluation", "API Reference", "Deployment", "Limitations", "Citation",
+]
 
-  const scrollToSection = (id: string) => {
+const REPR_TABLE = [
+  ["Linguistic Only", "Sparse / Handcrafted", "13-d", "spaCy", "Fully interpretable; direct coefficient attribution"],
+  ["TF-IDF", "Sparse / BoW", "≤15,000-d", "scikit-learn", "Readable n-gram tokens; large vocabulary"],
+  ["TF-IDF + Linguistic", "Sparse / Combined", "≤15,013-d", "scikit-learn", "Best of both sparse approaches"],
+  ["Word2Vec", "Dense / Averaged", "200-d", "gensim", "Context-aware token semantics; no direct interpretation"],
+  ["Sentence-BERT", "Dense / Contextual", "384-d", "sentence-transformers", "Whole-sentence semantics; near-SOTA without fine-tuning"],
+  ["DistilBERT", "Neural / End-to-end", "—", "Hugging Face", "Best performance; GPU required; attention-based"],
+]
+
+const ENDPOINTS = [
+  ["GET", "/api/status", "Pipeline completion status and results availability"],
+  ["GET", "/api/eda/dataset", "Dataset split sizes and class balance"],
+  ["GET", "/api/eda/class_distribution", "Class counts per split"],
+  ["GET", "/api/eda/length_stats", "Word/char/sentence count statistics"],
+  ["GET", "/api/eda/linguistic_stats", "13 linguistic feature statistics"],
+  ["GET", "/api/eda/ngrams", "Top-20 unigrams and bigrams by class"],
+  ["GET", "/api/eda/pos_distribution", "POS tag proportions by class"],
+  ["GET", "/api/eda/plots/{name}", "Serve EDA plot PNG by filename"],
+  ["GET", "/api/eda/preprocessing/samples", "Sample preprocessed posts (split, label, n params)"],
+  ["GET", "/api/models/results", "All 16 experiment results (val + test metrics)"],
+  ["GET", "/api/models/best_per_representation", "Best model per representation"],
+  ["GET", "/api/models/test_report", "Full test report for the best overall model"],
+  ["GET", "/api/models/confusion_matrix/{key}", "Confusion matrix JSON for a model"],
+  ["GET", "/api/models/roc_curve/{key}", "ROC curve data for a model"],
+  ["GET", "/api/models/interpretability/summary", "Cross-representation interpretability summary"],
+  ["GET", "/api/models/interpretability/coefficients/{rep}", "LR coefficients for linguistic_only / tfidf / tfidf_ling"],
+  ["GET", "/api/models/interpretability/attention", "DistilBERT attention weights"],
+  ["GET", "/api/models/error_analysis/summary", "Aggregated FP/FN analysis across all models"],
+  ["GET", "/api/models/error_analysis/{key}", "Detailed FP/FN examples for a model"],
+  ["GET", "/api/models/plots/{name}", "Serve evaluation or interpretability PNG"],
+  ["POST", "/api/predict", "Classify a single text { text: string }"],
+  ["POST", "/api/predict/batch", "Classify up to 100 texts string[]"],
+]
+
+export default function DocsPage() {
+  const [dataset, setDataset] = useState<DatasetSummary | null>(null)
+  const [models, setModels] = useState<ModelResultsResponse | null>(null)
+  const [activeSection, setActiveSection] = useState("Project Overview")
+
+  useEffect(() => {
+    Promise.allSettled([getDatasetSummary(), getModelResults()]).then(([d, m]) => {
+      if (d.status === "fulfilled") setDataset(d.value)
+      if (m.status === "fulfilled") setModels(m.value)
+    })
+  }, [])
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
     setActiveSection(id)
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <PageHeader
-        title="Documentation"
-        subtitle="Technical documentation for the FIG-Loneliness NLP project"
-      />
+    <div className="animate-fade-in">
+      <PageHeader title="Documentation" subtitle="Technical reference for the FIG-Loneliness NLP Pipeline" badge="Docs" />
 
-      <div className="flex-1 flex">
-        {/* In-page Navigation */}
-        <aside className="hidden lg:block w-56 shrink-0 border-r border-border p-4 sticky top-0 h-[calc(100vh-4rem)] overflow-y-auto">
-          <nav className="space-y-1">
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                onClick={() => scrollToSection(section.id)}
-                className={cn(
-                  'w-full text-left px-3 py-2 text-sm rounded-lg transition-colors',
-                  activeSection === section.id
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                )}
-              >
-                {section.label}
-              </button>
-            ))}
-          </nav>
+      <div className="flex gap-8">
+        {/* Sidebar nav */}
+        <aside className="hidden lg:block w-48 flex-shrink-0">
+          <div className="sticky top-8">
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider font-mono mb-3">Contents</p>
+            <nav className="space-y-1">
+              {SECTIONS.map(s => (
+                <button
+                  key={s}
+                  onClick={() => scrollTo(s)}
+                  className={`block w-full text-left text-xs px-3 py-1.5 rounded-lg transition-all ${
+                    activeSection === s
+                      ? "bg-violet-600/15 text-violet-300"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </nav>
+          </div>
         </aside>
 
         {/* Content */}
-        <div className="flex-1 p-6 max-w-4xl">
-          <div className="space-y-12">
-            {/* Overview */}
-            <section id="overview" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Project Overview</h2>
-              <div className="prose prose-invert max-w-none space-y-4 text-muted-foreground">
-                <p>
-                  The FIG-Loneliness project is a comprehensive NLP pipeline for detecting loneliness 
-                  self-disclosure in Reddit posts. Using the FIG-Loneliness dataset (Jiang et al., 2022), 
-                  we evaluate multiple text representations and classification models to understand 
-                  how computational methods can identify expressions of loneliness in social media text.
-                </p>
-                <p>
-                  This dashboard provides interactive visualizations of the entire pipeline, from 
-                  exploratory data analysis through model evaluation, interpretability analysis, and 
-                  live inference.
-                </p>
-                <h3 className="text-lg font-medium text-foreground mt-6">Research Questions</h3>
-                <ul className="list-disc pl-6 space-y-2">
-                  <li><strong>RQ1:</strong> What linguistic and structural characteristics differentiate lonely vs non-lonely posts?</li>
-                  <li><strong>RQ2:</strong> How well can baseline structural text classification models detect loneliness self-disclosure?</li>
-                  <li><strong>RQ3:</strong> How do text representations affect predictive performance?</li>
-                  <li><strong>RQ4:</strong> What trade-offs exist between performance and interpretability?</li>
-                  <li><strong>RQ5:</strong> What patterns characterize model errors and misclassifications?</li>
-                </ul>
-              </div>
-            </section>
+        <div className="flex-1 space-y-10 max-w-3xl">
+          {/* Project Overview */}
+          <section id="Project Overview">
+            <h2 className="text-lg font-bold text-white mb-4">Project Overview</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">
+              This project builds and evaluates an NLP pipeline for detecting loneliness self-disclosure in Reddit posts
+              using the FIG-Loneliness dataset. Loneliness self-disclosure is often subtle and indirect — expressed
+              through linguistic markers of social disconnection and relational dissatisfaction rather than direct
+              statements. The pipeline compares five text representations and three classical classifiers, plus a
+              fine-tuned DistilBERT model.
+            </p>
+            <div className="flex gap-3">
+              <a href="https://github.com/your-username/fig-loneliness" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 border border-[#1e1e2e] rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:border-[#2e2e3e] transition-all">
+                <Github className="h-4 w-4" /> GitHub
+              </a>
+              <a href="https://huggingface.co/datasets/FIG-Loneliness/FIG-Loneliness" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 border border-[#1e1e2e] rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-all">
+                <ExternalLink className="h-4 w-4" /> HuggingFace Dataset
+              </a>
+              <a href={`${API.replace("/api", "")}/docs`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 border border-[#1e1e2e] rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-all">
+                <ExternalLink className="h-4 w-4" /> API Swagger UI
+              </a>
+            </div>
+          </section>
 
-            {/* Architecture */}
-            <section id="architecture" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Architecture</h2>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-sm font-mono">
-                    {['Reddit Data', 'Preprocessing', 'EDA', 'Feature Extraction', 'Model Training', 'Evaluation', 'Error Analysis', 'Interpretability', 'API', 'Frontend'].map((step, idx, arr) => (
-                      <div key={step} className="flex items-center gap-2">
-                        <Badge variant="outline" className="px-3 py-1">{step}</Badge>
-                        {idx < arr.length - 1 && <span className="text-muted-foreground">→</span>}
-                      </div>
+          {/* Dataset */}
+          <section id="Dataset">
+            <h2 className="text-lg font-bold text-white mb-4">Dataset</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">
+              FIG-Loneliness contains 5,633 Reddit posts annotated for loneliness self-disclosure by trained
+              undergraduate research assistants and MTurk workers. Posts were collected from four subreddits
+              (r/loneliness, r/lonely, r/youngadults, r/college) between 2018–2020 using the Pushshift API.
+            </p>
+            {dataset ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border border-[#1e1e2e] rounded-xl overflow-hidden">
+                  <thead>
+                    <tr className="bg-[#111118] border-b border-[#1e1e2e]">
+                      <th className="text-left py-3 px-4 text-xs text-slate-500 font-mono">Split</th>
+                      <th className="text-left py-3 px-4 text-xs text-slate-500 font-mono">Total</th>
+                      <th className="text-left py-3 px-4 text-xs text-slate-500 font-mono">Lonely</th>
+                      <th className="text-left py-3 px-4 text-xs text-slate-500 font-mono">Non-Lonely</th>
+                      <th className="text-left py-3 px-4 text-xs text-slate-500 font-mono">Lonely %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["train", "validation", "test"] as const).map(s => {
+                      const d = dataset.splits[s]
+                      return (
+                        <tr key={s} className="border-b border-[#1e1e2e]/50">
+                          <td className="py-3 px-4 font-mono text-xs text-violet-400 capitalize">{s}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-white">{d.n_samples.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-rose-400">{d.n_lonely.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-blue-400">{d.n_non_lonely.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-400">{((d.n_lonely / d.n_samples) * 100).toFixed(1)}%</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="h-24 bg-[#111118] border border-[#1e1e2e] rounded-xl animate-pulse" />
+            )}
+          </section>
+
+          {/* Preprocessing */}
+          <section id="Preprocessing">
+            <h2 className="text-lg font-bold text-white mb-4">Preprocessing</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">
+              All posts pass through a reproducible 8-step preprocessing pipeline before feature extraction.
+              Preprocessing choices are kept minimal to avoid removing loneliness-relevant linguistic cues.
+            </p>
+            <CodeBlock lang="python" code={`# Core preprocessing steps
+text = ftfy.fix_text(raw_text)                  # 1. Unicode normalisation
+text = unicodedata.normalize("NFKC", text)
+text = bleach.clean(text, tags=[], strip=True)  # 2. HTML stripping
+text = URL_PATTERN.sub(" ", text)               # 3. URL removal
+text = MENTION_PATTERN.sub(" ", text)           # 3. Reddit mention removal
+text = emoji.replace_emoji(text, " ")           # 3. Emoji removal
+text = text.lower()                             # 4. Lowercasing
+text = REPEATED_PATTERN.sub(r"\\1\\1", text)   # 4. Char normalisation
+doc = nlp(text)                                 # 5. spaCy tokenisation
+tokens_no_stop = [                              # 6. Stopword removal
+    t.lemma_ for t in doc
+    if not t.is_stop or t.text in NEGATIONS     # preserve negations!
+]`} />
+            <Link href="/preprocessing" className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 mt-3 transition-colors">
+              → Explore the preprocessing pipeline and sample posts
+            </Link>
+          </section>
+
+          {/* Text Representations */}
+          <section id="Text Representations">
+            <h2 className="text-lg font-bold text-white mb-4">Text Representations</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[#1e1e2e]">
+                    {["Representation", "Type", "Dimensions", "Library", "Notes"].map(h => (
+                      <th key={h} className="text-left py-2 px-3 text-slate-500 font-mono">{h}</th>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
+                  </tr>
+                </thead>
+                <tbody>
+                  {REPR_TABLE.map(([rep, type, dim, lib, note]) => (
+                    <tr key={rep} className="border-b border-[#1e1e2e]/50">
+                      <td className="py-2.5 px-3"><Tag color="violet">{rep}</Tag></td>
+                      <td className="py-2.5 px-3 font-mono text-slate-400">{type}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-300">{dim}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-500">{lib}</td>
+                      <td className="py-2.5 px-3 text-slate-500">{note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
-            {/* Dataset */}
-            <section id="dataset" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Dataset</h2>
-              <div className="space-y-4 text-muted-foreground">
-                <p>
-                  The FIG-Loneliness dataset contains 5,633 Reddit posts labeled for loneliness 
-                  self-disclosure. Posts were collected from loneliness-related subreddits 
-                  (r/loneliness, r/lonely) and general subreddits (r/youngadults, r/college).
-                </p>
-                <Card>
-                  <CardContent className="p-0">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/50">
-                          <th className="text-left font-medium px-4 py-3">Split</th>
-                          <th className="text-right font-medium px-4 py-3">Total</th>
-                          <th className="text-right font-medium px-4 py-3">Lonely</th>
-                          <th className="text-right font-medium px-4 py-3">Non-Lonely</th>
-                          <th className="text-right font-medium px-4 py-3">Lonely %</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-border">
-                          <td className="px-4 py-3 font-medium">Train</td>
-                          <td className="px-4 py-3 text-right font-mono">4,506</td>
-                          <td className="px-4 py-3 text-right font-mono">2,106</td>
-                          <td className="px-4 py-3 text-right font-mono">2,400</td>
-                          <td className="px-4 py-3 text-right font-mono">46.7%</td>
-                        </tr>
-                        <tr className="border-b border-border">
-                          <td className="px-4 py-3 font-medium">Validation</td>
-                          <td className="px-4 py-3 text-right font-mono">563</td>
-                          <td className="px-4 py-3 text-right font-mono">263</td>
-                          <td className="px-4 py-3 text-right font-mono">300</td>
-                          <td className="px-4 py-3 text-right font-mono">46.7%</td>
-                        </tr>
-                        <tr>
-                          <td className="px-4 py-3 font-medium">Test</td>
-                          <td className="px-4 py-3 text-right font-mono">564</td>
-                          <td className="px-4 py-3 text-right font-mono">264</td>
-                          <td className="px-4 py-3 text-right font-mono">300</td>
-                          <td className="px-4 py-3 text-right font-mono">46.8%</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
+          {/* Models */}
+          <section id="Models & Training">
+            <h2 className="text-lg font-bold text-white mb-4">Models & Training</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">
+              Classical classifiers (LR, SVM, RF) were trained on each of the 5 non-neural representations,
+              yielding 15 classical experiments. DistilBERT was fine-tuned end-to-end for 3 epochs with early
+              stopping (patience=2) on validation F1.
+            </p>
+            {models && (
+              <Callout type="success">
+                Best model: <strong>{repLabel(models.best_representation)}</strong> / <strong>{modelLabel(models.best_model)}</strong> —
+                Validation F1: <strong className="font-mono">{fmt(models.best_f1, 4)}</strong>
+              </Callout>
+            )}
+            <CodeBlock lang="python" code={`# DistilBERT fine-tuning
+training_args = TrainingArguments(
+    eval_strategy="epoch",
+    save_strategy="epoch",
+    num_train_epochs=3,
+    learning_rate=2e-5,
+    weight_decay=0.01,
+    load_best_model_at_end=True,
+    metric_for_best_model="f1",
+)
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized["train"],
+    eval_dataset=tokenized["validation"],
+    compute_metrics=compute_metrics,
+    callbacks=[EarlyStoppingCallback(patience=2)],
+)`} />
+          </section>
 
-            {/* Preprocessing */}
-            <section id="preprocessing" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Preprocessing Pipeline</h2>
-              <div className="space-y-4">
-                <ol className="list-decimal pl-6 space-y-3 text-muted-foreground">
-                  <li><strong>Unicode normalization</strong> — ftfy + NFKC normalization</li>
-                  <li><strong>HTML stripping</strong> — bleach library for HTML entity removal</li>
-                  <li><strong>URL/mention/hashtag/emoji removal</strong> — regex-based cleaning</li>
-                  <li><strong>Lowercasing + repeated character normalization</strong> — e.g., &quot;soooo&quot; → &quot;soo&quot;</li>
-                  <li><strong>spaCy tokenization, lemmatization, POS tagging</strong> — en_core_web_sm model</li>
-                  <li><strong>Stopword removal</strong> — preserving negations (not, never, no)</li>
-                  <li><strong>Linguistic feature extraction</strong> — 13 features (see table below)</li>
-                </ol>
+          {/* Evaluation */}
+          <section id="Evaluation">
+            <h2 className="text-lg font-bold text-white mb-4">Evaluation</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">
+              All models are evaluated using Precision, Recall, F1-Score, Accuracy, and ROC-AUC. The binary
+              task targets the Lonely class (label=1). The optimal classification threshold is derived from
+              the Youden J statistic (maximises TPR − FPR on the validation ROC curve) and applied at inference.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Precision", def: "TP / (TP + FP) — what fraction of predicted-lonely posts are truly lonely" },
+                { label: "Recall", def: "TP / (TP + FN) — what fraction of truly lonely posts are identified" },
+                { label: "F1-Score", def: "Harmonic mean of Precision and Recall" },
+                { label: "ROC-AUC", def: "Area under the ROC curve — model discrimination ability across all thresholds" },
+              ].map(({ label, def }) => (
+                <div key={label} className="bg-[#111118] border border-[#1e1e2e] rounded-xl p-4">
+                  <p className="text-xs font-mono font-bold text-violet-400 mb-1">{label}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{def}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-                <h3 className="text-lg font-medium text-foreground mt-6">Linguistic Features</h3>
-                <Card>
-                  <CardContent className="p-0">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/50">
-                          <th className="text-left font-medium px-4 py-3">Feature</th>
-                          <th className="text-left font-medium px-4 py-3">Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linguisticFeatures.map((f) => (
-                          <tr key={f.name} className="border-b border-border last:border-b-0">
-                            <td className="px-4 py-2 font-mono text-xs">{f.name}</td>
-                            <td className="px-4 py-2 text-muted-foreground">{f.description}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
+          {/* API Reference */}
+          <section id="API Reference">
+            <h2 className="text-lg font-bold text-white mb-4">API Reference</h2>
+            <p className="text-sm text-slate-400 mb-4">
+              The FastAPI backend is a read-only results server. All endpoints return pre-computed results from the pipeline.
+              The API base URL is <code className="font-mono text-violet-400 text-xs bg-violet-600/10 px-1.5 py-0.5 rounded">{API}</code>.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[#1e1e2e]">
+                    <th className="text-left py-2 px-3 text-slate-500 font-mono">Method</th>
+                    <th className="text-left py-2 px-3 text-slate-500 font-mono">Path</th>
+                    <th className="text-left py-2 px-3 text-slate-500 font-mono">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ENDPOINTS.map(([method, path, desc]) => (
+                    <tr key={path} className="border-b border-[#1e1e2e]/40 hover:bg-white/2">
+                      <td className="py-2 px-3">
+                        <span className={`font-mono font-bold text-xs ${method === "POST" ? "text-amber-400" : "text-emerald-400"}`}>
+                          {method}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 font-mono text-slate-400 text-[11px]">{path}</td>
+                      <td className="py-2 px-3 text-slate-500">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
-            {/* Representations */}
-            <section id="representations" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Text Representations</h2>
-              <Card>
-                <CardContent className="p-0">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left font-medium px-4 py-3">Representation</th>
-                        <th className="text-left font-medium px-4 py-3">Type</th>
-                        <th className="text-left font-medium px-4 py-3">Dimensionality</th>
-                        <th className="text-left font-medium px-4 py-3">Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {representations.map((r) => (
-                        <tr key={r.name} className="border-b border-border last:border-b-0">
-                          <td className="px-4 py-3 font-medium">{r.name}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline">{r.type}</Badge>
-                          </td>
-                          <td className="px-4 py-3 font-mono text-xs">{r.dim}</td>
-                          <td className="px-4 py-3 text-muted-foreground text-xs">{r.notes}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Models */}
-            <section id="models" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Models</h2>
-              <Card>
-                <CardContent className="p-0">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left font-medium px-4 py-3">Model</th>
-                        <th className="text-left font-medium px-4 py-3">Representations</th>
-                        <th className="text-left font-medium px-4 py-3">Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {models.map((m) => (
-                        <tr key={m.name} className="border-b border-border last:border-b-0">
-                          <td className="px-4 py-3 font-medium">{m.name}</td>
-                          <td className="px-4 py-3 text-muted-foreground text-xs">{m.reps}</td>
-                          <td className="px-4 py-3 text-muted-foreground text-xs">{m.notes}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Metrics */}
-            <section id="metrics" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Evaluation Metrics</h2>
-              <div className="space-y-4 text-muted-foreground">
-                <ul className="space-y-3">
-                  <li><strong>Precision:</strong> The ratio of true positives to all predicted positives. Measures how many predicted lonely posts are actually lonely.</li>
-                  <li><strong>Recall:</strong> The ratio of true positives to all actual positives. Measures how many actual lonely posts are correctly identified.</li>
-                  <li><strong>F1 Score:</strong> The harmonic mean of precision and recall. Provides a balanced measure of model performance.</li>
-                  <li><strong>ROC-AUC:</strong> Area under the Receiver Operating Characteristic curve. Measures the model&apos;s ability to discriminate between classes at various thresholds.</li>
-                </ul>
-                <p className="text-sm">
-                  All models use balanced class weights to handle the slight class imbalance (46.7% lonely, 53.3% non-lonely).
-                </p>
-              </div>
-            </section>
-
-            {/* API Reference */}
-            <section id="api" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">API Reference</h2>
-              <Card>
-                <CardContent className="p-0">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left font-medium px-4 py-3 w-20">Method</th>
-                        <th className="text-left font-medium px-4 py-3">Path</th>
-                        <th className="text-left font-medium px-4 py-3">Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {apiEndpoints.map((e) => (
-                        <tr key={e.path} className="border-b border-border last:border-b-0">
-                          <td className="px-4 py-2">
-                            <Badge variant={e.method === 'POST' ? 'default' : 'secondary'} className="font-mono text-xs">
-                              {e.method}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-2 font-mono text-xs">{e.path}</td>
-                          <td className="px-4 py-2 text-muted-foreground text-xs">{e.description}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Deployment */}
-            <section id="deployment" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Deployment</h2>
-              <div className="space-y-4 text-muted-foreground">
-                <p>
-                  The pipeline can be run on Google Colab, with results uploaded to HuggingFace Spaces 
-                  for API serving. The FastAPI backend serves model predictions and cached results.
-                </p>
-                <CodeBlock>{`# Clone the repository
+          {/* Deployment */}
+          <section id="Deployment">
+            <h2 className="text-lg font-bold text-white mb-4">Deployment</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">
+              The pipeline must run once offline (on a machine with GPU access for DistilBERT). Results are then
+              uploaded to HuggingFace Spaces which serves the FastAPI backend. This Next.js app connects to that API.
+            </p>
+            <CodeBlock lang="bash" code={`# 1. Clone the Space repository
 !git clone https://huggingface.co/spaces/your-username/fig-loneliness
 %cd fig-loneliness
 
-# Install dependencies
+# 2. Install dependencies
 !pip install -r requirements.txt
 
-# Run the full pipeline
-!python run_pipeline.py --eval_on_test --skip_bert=False`}</CodeBlock>
-              </div>
-            </section>
+# 3. Run the full pipeline (requires T4 GPU for DistilBERT)
+!python run_pipeline.py
 
-            {/* Limitations */}
-            <section id="limitations" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Limitations</h2>
-              <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
-                <li><strong>English-only:</strong> The model is trained on English text and may not generalize to other languages.</li>
-                <li><strong>Reddit-specific:</strong> Training data comes from Reddit, which has specific linguistic patterns and user demographics.</li>
-                <li><strong>Loneliness overlap:</strong> Loneliness expressions may overlap with depression, anxiety, and other mental health conditions.</li>
-                <li><strong>No demographic data:</strong> The dataset does not include user demographics, limiting analysis of potential biases.</li>
-                <li><strong>GPU required:</strong> DistilBERT fine-tuning requires GPU resources (Colab T4 or better recommended).</li>
-                <li><strong>Temporal effects:</strong> Language patterns around loneliness may change over time, potentially affecting model performance.</li>
-              </ul>
-            </section>
+# 4. Commit results back to the Space
+!git add results/
+!git commit -m "Add pipeline results"
+!git push`} />
+            <Callout type="warning" className="mt-4">
+              DistilBERT fine-tuning requires ~30 minutes on a T4 GPU. The pipeline caches all intermediate results
+              to disk, so individual stages can be re-run independently.
+            </Callout>
+          </section>
 
-            {/* Citation */}
-            <section id="citation" className="scroll-mt-8">
-              <h2 className="text-2xl font-semibold mb-4">Citation</h2>
-              <Card className="bg-muted/30">
-                <CardContent className="pt-6">
-                  <pre className="text-sm font-mono whitespace-pre-wrap text-muted-foreground">
-{`@inproceedings{jiang2022understanding,
-  title={Understanding Loneliness Self-Disclosure on Social Media: 
-         A Study of Reddit Posts during COVID-19},
-  author={Jiang, Huimin and others},
-  booktitle={Proceedings of the International AAAI Conference on 
-             Web and Social Media (ICWSM)},
-  year={2022}
-}`}
-                  </pre>
-                </CardContent>
-              </Card>
-            </section>
-          </div>
+          {/* Limitations */}
+          <section id="Limitations">
+            <h2 className="text-lg font-bold text-white mb-4">Limitations</h2>
+            <ul className="space-y-2">
+              {[
+                "English-only: all models and features are trained on English Reddit text",
+                "Reddit-specific: vocabulary, style, and discourse patterns may not generalise to other platforms",
+                "Temporal: data covers 2018–2020 only; language patterns may have shifted",
+                "Construct overlap: loneliness shares linguistic features with depression and anxiety",
+                "No demographic data: fairness analysis across subgroups is not possible",
+                "GPU dependency: DistilBERT fine-tuning requires a GPU; CPU inference is very slow",
+                "Annotation noise: some posts have ambiguous loneliness status (majority vote used)",
+              ].map(l => (
+                <li key={l} className="flex gap-2 text-xs text-slate-400">
+                  <span className="text-rose-500 flex-shrink-0">—</span>
+                  {l}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Citation */}
+          <section id="Citation">
+            <h2 className="text-lg font-bold text-white mb-4">Citation</h2>
+            <div className="bg-[#0d1117] border border-[#1e1e2e] rounded-xl p-5">
+              <p className="text-xs font-mono text-slate-400 leading-loose">
+                Jiang, Y., Jiang, Y., Leqi, L., & Winkielman, P. (2022).{"\n"}
+                Many Ways to Be Lonely: Fine-Grained Characterization of Loneliness{"\n"}
+                and Its Potential Changes in COVID-19.{"\n"}
+                <em>Proceedings of the International AAAI Conference on Web and Social Media</em>, 16(1), 405–416.{"\n"}
+                <a
+                  href="https://ojs.aaai.org/index.php/ICWSM/article/view/19302"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-violet-400 hover:text-violet-300 underline"
+                >
+                  https://ojs.aaai.org/index.php/ICWSM/article/view/19302
+                </a>
+              </p>
+            </div>
+            <p className="text-xs text-slate-600 mt-2 font-mono">Dataset licence: CC BY-NC 4.0</p>
+          </section>
         </div>
       </div>
     </div>

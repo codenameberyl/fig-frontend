@@ -1,18 +1,21 @@
-// FIG-Loneliness API Types
-// Exact shapes from FastAPI backend - no mock data
+// ─── Status ───────────────────────────────────────────────────────────────────
+export interface PipelineStepState {
+  status: "done" | "running" | "error"
+  timestamp?: string
+  [key: string]: unknown
+}
 
-// GET /api/status
 export interface StatusResponse {
-  status: 'ok'
+  status: "ok"
   title: string
   version: string
   results_available: boolean
   completed_steps: string[]
   pending_steps: string[]
-  pipeline_state: Record<string, { status: string; timestamp?: string } & Record<string, unknown>>
+  pipeline_state: Record<string, PipelineStepState>
 }
 
-// GET /api/eda/dataset
+// ─── Dataset ──────────────────────────────────────────────────────────────────
 export interface SplitInfo {
   n_samples: number
   columns: string[]
@@ -27,11 +30,11 @@ export interface DatasetSummary {
     test: SplitInfo
   }
   total_samples: number
-  label_map: { '0': string; '1': string }
+  label_map: { "0": string; "1": string }
 }
 
-// GET /api/eda/class_distribution
-export interface ClassDistributionSplit {
+// ─── EDA ──────────────────────────────────────────────────────────────────────
+export interface ClassDistSplit {
   total: number
   lonely: number
   non_lonely: number
@@ -39,12 +42,11 @@ export interface ClassDistributionSplit {
 }
 
 export interface ClassDistribution {
-  train: ClassDistributionSplit
-  validation: ClassDistributionSplit
-  test: ClassDistributionSplit
+  train: ClassDistSplit
+  validation: ClassDistSplit
+  test: ClassDistSplit
 }
 
-// GET /api/eda/length_stats
 export interface DescStats {
   mean: number
   median: number
@@ -55,18 +57,19 @@ export interface DescStats {
   q75: number
 }
 
+export interface LengthFeatureStats {
+  non_lonely: DescStats
+  lonely: DescStats
+}
+
 export interface LengthStats {
-  word_count: { non_lonely: DescStats; lonely: DescStats }
-  char_count: { non_lonely: DescStats; lonely: DescStats }
-  sentence_count: { non_lonely: DescStats; lonely: DescStats }
+  word_count: LengthFeatureStats
+  char_count: LengthFeatureStats
+  sentence_count: LengthFeatureStats
 }
 
-// GET /api/eda/linguistic_stats
-export interface LinguisticStats {
-  [feature: string]: { non_lonely: DescStats; lonely: DescStats }
-}
+export type LinguisticStats = Record<string, LengthFeatureStats>
 
-// GET /api/eda/ngrams
 export interface NGramEntry {
   term: string
   count: number
@@ -79,13 +82,12 @@ export interface NGrams {
   lonely_bigrams: NGramEntry[]
 }
 
-// GET /api/eda/pos_distribution
 export interface PosDistribution {
   non_lonely: Record<string, number>
   lonely: Record<string, number>
 }
 
-// GET /api/eda/preprocessing/samples
+// ─── Preprocessing ────────────────────────────────────────────────────────────
 export interface PreprocessedSample {
   idx: number
   unique_id: string
@@ -109,7 +111,6 @@ export interface PreprocessingSamples {
   non_lonely: PreprocessedSample[]
 }
 
-// GET /api/eda/preprocessing/summary
 export interface PreprocessingSummary {
   status: string
   timestamp: string
@@ -119,7 +120,7 @@ export interface PreprocessingSummary {
   test_size: number
 }
 
-// GET /api/models/results
+// ─── Models ───────────────────────────────────────────────────────────────────
 export interface ModelResult {
   representation: string
   model: string
@@ -146,23 +147,22 @@ export interface ModelResultsResponse {
   best_f1: number
 }
 
-// GET /api/models/test_report
-export interface ClassificationReportClass {
+export interface ClassMetrics {
   precision: number
   recall: number
-  'f1-score': number
+  "f1-score": number
   support: number
 }
 
 export interface ClassificationReport {
-  'Non-Lonely': ClassificationReportClass
-  'Lonely': ClassificationReportClass
+  "Non-Lonely": ClassMetrics
+  Lonely: ClassMetrics
   accuracy: number
-  'macro avg': ClassificationReportClass
-  'weighted avg': ClassificationReportClass
+  "macro avg": ClassMetrics
+  "weighted avg": ClassMetrics
 }
 
-export interface ConfusionMatrix {
+export interface ConfusionMatrixData {
   model_key: string
   labels: string[]
   matrix: number[][]
@@ -176,7 +176,7 @@ export interface ConfusionMatrix {
   specificity: number
 }
 
-export interface RocCurve {
+export interface RocCurveData {
   model_key: string
   auc: number
   fpr: number[]
@@ -192,47 +192,12 @@ export interface TestReport {
   model: string
   roc_auc: number
   classification_report: ClassificationReport
-  confusion_matrix: ConfusionMatrix
-  roc_curve: RocCurve
+  confusion_matrix: ConfusionMatrixData
+  roc_curve: RocCurveData
 }
 
-// GET /api/models/error_analysis/summary
-export interface ErrorModelSummary {
-  representation: string
-  model: string
-  total_test: number
-  TP: number
-  TN: number
-  FP: number
-  FN: number
-  error_rate: number
-  fp_rate: number
-  fn_rate: number
-  false_positives_avg_features?: Record<string, number>
-  false_negatives_avg_features?: Record<string, number>
-}
-
-export interface ErrorAnalysisSummary {
-  best_model_key: string
-  n_models_analysed: number
-  model_summaries: ErrorModelSummary[]
-  confusion_overlap: { 
-    top_confused_posts: { 
-      unique_id: string
-      n_models_wrong: number
-      models: string[] 
-    }[] 
-  }
-  qualitative_patterns: { 
-    n_fp_analysed: number
-    n_fn_analysed: number
-    observations: string[] 
-  }
-  error_rate_ranking: ErrorModelSummary[]
-}
-
-// GET /api/models/error_analysis/{modelKey}
-export interface ErrorExampleFeatures {
+// ─── Error Analysis ───────────────────────────────────────────────────────────
+export interface ErrorFeatures {
   word_count: number
   char_count: number
   sentence_count: number
@@ -253,11 +218,45 @@ export interface ErrorExample {
   unique_id: string
   true_label: 0 | 1
   predicted_label: 0 | 1
-  outcome: 'FP' | 'FN'
+  outcome: "FP" | "FN"
   original_text: string
   cleaned_text: string
   word_count: number
-  features: ErrorExampleFeatures
+  features: ErrorFeatures
+}
+
+export interface ErrorModelSummary {
+  representation: string
+  model: string
+  total_test: number
+  TP: number
+  TN: number
+  FP: number
+  FN: number
+  error_rate: number
+  fp_rate: number
+  fn_rate: number
+  false_positives_avg_features?: Record<string, number>
+  false_negatives_avg_features?: Record<string, number>
+}
+
+export interface ConfusedPost {
+  unique_id: string
+  n_models_wrong: number
+  models: string[]
+}
+
+export interface ErrorAnalysisSummary {
+  best_model_key: string
+  n_models_analysed: number
+  model_summaries: ErrorModelSummary[]
+  confusion_overlap: { top_confused_posts: ConfusedPost[] }
+  qualitative_patterns: {
+    n_fp_analysed: number
+    n_fn_analysed: number
+    observations: string[]
+  }
+  error_rate_ranking: ErrorModelSummary[]
 }
 
 export interface ErrorAnalysisDetail {
@@ -266,13 +265,8 @@ export interface ErrorAnalysisDetail {
   false_negatives: ErrorExample[]
 }
 
-// GET /api/models/error_analysis_keys
-export interface ErrorAnalysisKeys {
-  keys: string[]
-}
-
-// GET /api/models/interpretability/summary
-export interface InterpretabilityItem {
+// ─── Interpretability ─────────────────────────────────────────────────────────
+export interface RepInterpretability {
   representation: string
   interpretability_score: number
   interpretability_rationale: string
@@ -286,12 +280,14 @@ export interface InterpretabilityItem {
   attention_caveat?: string
 }
 
-export interface InterpretabilitySummary {
-  [representation: string]: InterpretabilityItem
+export type InterpretabilitySummary = Record<string, RepInterpretability>
+
+export interface FeatureCoeff {
+  feature: string
+  coefficient: number
 }
 
-// GET /api/models/interpretability/coefficients/{representation}
-export interface FeatureRanked {
+export interface RankedFeature {
   rank: number
   feature: string
   coefficient: number
@@ -304,12 +300,17 @@ export interface LrCoefficients {
   model: string
   n_features_total: number
   top_n: number
-  lonely_indicators: { feature: string; coefficient: number }[]
-  non_lonely_indicators: { feature: string; coefficient: number }[]
-  features_ranked?: FeatureRanked[]
+  lonely_indicators?: FeatureCoeff[]
+  non_lonely_indicators?: FeatureCoeff[]
+  features_ranked?: RankedFeature[]
+  n_features?: number
 }
 
-// GET /api/models/interpretability/attention
+export interface TokenAttention {
+  token: string
+  avg_attention: number
+}
+
 export interface AttentionData {
   representation: string
   method: string
@@ -317,14 +318,14 @@ export interface AttentionData {
   n_lonely_samples: number
   n_non_lonely_samples: number
   top_n: number
-  lonely_top_tokens: { token: string; avg_attention: number }[]
-  non_lonely_top_tokens: { token: string; avg_attention: number }[]
+  lonely_top_tokens: TokenAttention[]
+  non_lonely_top_tokens: TokenAttention[]
 }
 
-// POST /api/predict
+// ─── Prediction ───────────────────────────────────────────────────────────────
 export interface PredictResponse {
   label: 0 | 1
-  label_name: 'lonely' | 'non_lonely'
+  label_name: "lonely" | "non_lonely"
   confidence: number
   threshold_used: number
   representation: string
@@ -332,12 +333,6 @@ export interface PredictResponse {
   input_text: string
 }
 
-// Helper types for components
-export interface RocPoint {
-  fpr: number
-  tpr: number
-  threshold?: number
+export interface BatchPredictItem extends PredictResponse {
+  error?: string
 }
-
-export type ConfusionMatrixData = ConfusionMatrix
-

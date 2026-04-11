@@ -1,7 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap");
+
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    --background: 240 9% 6%;
+    --foreground: 213 31% 91%;
+    --card: 240 9% 8%;
+    --card-foreground: 213 31% 91%;
+    --popover: 240 9% 10%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 263 70% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 9% 12%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 240 9% 14%;
+    --muted-foreground: 215 20% 45%;
+    --accent: 263 70% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 9% 15%;
+    --input: 240 9% 12%;
+    --ring: 263 70% 56%;
+    --sidebar-background: 240 9% 7%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 263 70% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 9% 12%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 240 9% 12%;
+    --sidebar-ring: 263 70% 56%;
+    --chart-1: 263 70% 56%;
+    --chart-2: 188 90% 43%;
+    --chart-3: 350 89% 60%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 142 71% 45%;
+  }
+}
 
 /* FIG-Loneliness Dark Academic Theme */
 :root {
@@ -135,14 +179,40 @@
   --color-non-lonely: var(--color-non-lonely);
   --color-violet: var(--color-violet);
   --color-cyan: var(--color-cyan);
+  /* Animation keyframes */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-text-primary;
+    font-family: "Inter", sans-serif;
+  }
+  .font-mono {
+    font-family: "JetBrains Mono", monospace;
   }
 }
 
@@ -184,4 +254,18 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0f; }
+::-webkit-scrollbar-thumb { background: #2e2e3e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3e3e5e; }
+ 
+/* Recharts tooltip override — always dark */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1e1e2e !important;
+  border: 1px solid #2e2e3e !important;
+  border-radius: 8px !important;
+  color: #e2e8f0 !important;
 }

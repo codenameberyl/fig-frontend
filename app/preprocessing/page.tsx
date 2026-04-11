@@ -1,384 +1,338 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import useSWR from 'swr'
-import { PageHeader } from '@/components/shared/page-header'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { LoadingState } from '@/components/shared/loading-state'
-import { ErrorState } from '@/components/shared/error-state'
-import { CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
-import type { PreprocessingSamples, PreprocessingSummary, PreprocessedSample } from '@/lib/types'
+import { useEffect, useState } from "react"
+import { getPreprocessingSummary, getPreprocessingSamples } from "@/lib/api"
+import type { PreprocessingSummary, PreprocessingSamples, PreprocessedSample } from "@/lib/types"
+import { relativeTime, fmt } from "@/lib/utils"
+import {
+  PageHeader, SectionCard, EmptyState, SkeletonCard, Tag, Callout,
+} from "@/components/shared"
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react"
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://your-space.hf.space/api'
-
-const fetcher = (url: string) => fetch(url).then(res => {
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-  return res.json()
-})
-
-const pipelineSteps = [
-  { num: 1, name: 'Unicode normalisation', tool: 'ftfy + NFKC', description: 'Fixes mojibake and normalises unicode characters' },
-  { num: 2, name: 'HTML stripping', tool: 'bleach', description: 'Strips HTML tags while keeping text content' },
-  { num: 3, name: 'URL / Reddit removal', tool: 'regex + emoji library', description: 'Removes URLs, Reddit mentions, subreddits, and emojis' },
-  { num: 4, name: 'Hashtag normalisation', tool: 'regex', description: 'Converts #word to word' },
-  { num: 5, name: 'Lowercasing + normalisation', tool: 'Python str methods', description: 'Lowercases text and reduces repeated characters (3+ → 2)' },
-  { num: 6, name: 'Tokenisation & POS tagging', tool: 'spaCy en_core_web_sm', description: 'Tokenises, lemmatises, and tags parts of speech' },
-  { num: 7, name: 'Stopword removal', tool: 'spaCy + custom', description: 'Removes stopwords while preserving negations (not, never, n\'t)' },
-  { num: 8, name: 'Feature extraction', tool: 'Custom Python', description: 'Computes 13 linguistic features per post' },
+const PIPELINE_STEPS = [
+  { n: 1, title: "Unicode Normalisation", tool: "ftfy + NFKC", desc: "Fix encoding artefacts and normalise to NFKC form. Handles mojibake, smart quotes, and non-standard whitespace." },
+  { n: 2, title: "HTML Stripping", tool: "bleach", desc: "Remove all HTML tags while preserving the underlying text content. Reddit posts sometimes contain markdown-encoded HTML." },
+  { n: 3, title: "Noise Removal", tool: "regex + emoji", desc: "Remove URLs (http/https), Reddit mentions (@user), subreddit references (r/sub), hashtags, and emoji characters." },
+  { n: 4, title: "Text Normalisation", tool: "regex", desc: "Lowercase all text and collapse runs of 3+ repeated characters to 2 (e.g. 'sooooo' → 'soo'). Normalise all whitespace." },
+  { n: 5, title: "Tokenisation & Tagging", tool: "spaCy en_core_web_sm", desc: "Sentence segmentation, word tokenisation, part-of-speech tagging, and lemmatisation. NER and dependency parsing are disabled for speed." },
+  { n: 6, title: "Stopword Removal", tool: "spaCy + custom", desc: "Remove stopwords from the spaCy list. Negations (not, never, n't, etc.) are explicitly preserved as they carry semantic signal." },
+  { n: 7, title: "Token Filtering", tool: "custom", desc: "Discard tokens that are non-alphabetic or fewer than 2 characters. Retain only meaningful lexical tokens." },
+  { n: 8, title: "Linguistic Feature Extraction", tool: "custom", desc: "Compute 13 surface and psycholinguistic features per post: word count, char count, sentence count, avg sentence length, type-token ratio, pronoun/negation/social/emotion/noun/verb/adj/adv ratios." },
 ]
 
-const featureDescriptions = [
-  { feature: 'word_count', description: 'Total token count', relevance: 'Post length proxy' },
-  { feature: 'char_count', description: 'Character count', relevance: 'Verbosity indicator' },
-  { feature: 'sentence_count', description: 'Sentence count (sentencizer)', relevance: 'Structural complexity' },
-  { feature: 'avg_sentence_length', description: 'word_count / sentence_count', relevance: 'Prose density' },
-  { feature: 'type_token_ratio', description: 'unique_tokens / total_tokens', relevance: 'Lexical diversity' },
-  { feature: 'pronoun_ratio', description: 'First-person pronouns / total', relevance: 'Self-focus (I, me, my, mine, myself)' },
-  { feature: 'negation_ratio', description: 'Negation words / total', relevance: 'Negative framing' },
-  { feature: 'social_word_ratio', description: 'Social vocabulary / total', relevance: 'Relational content' },
-  { feature: 'emotion_word_ratio', description: 'Emotion vocabulary / total', relevance: 'Affective content' },
-  { feature: 'noun_ratio', description: 'NOUN tokens / total', relevance: 'Referential density' },
-  { feature: 'verb_ratio', description: 'VERB tokens / total', relevance: 'Action / state density' },
-  { feature: 'adj_ratio', description: 'ADJ tokens / total', relevance: 'Descriptive density' },
-  { feature: 'adv_ratio', description: 'ADV tokens / total', relevance: 'Modification density' },
+const FEATURE_TABLE = [
+  ["word_count", "Total token count (all alpha tokens ≥ 2 chars)", "Post length proxy"],
+  ["char_count", "Character count of cleaned text", "Verbosity indicator"],
+  ["sentence_count", "Sentence count (spaCy sentencizer)", "Structural complexity"],
+  ["avg_sentence_length", "word_count / sentence_count", "Prose density"],
+  ["type_token_ratio", "unique_tokens / total_tokens", "Lexical diversity"],
+  ["pronoun_ratio", "First-person pronouns / total (I, me, my, mine, myself)", "Self-focus"],
+  ["negation_ratio", "Negation words / total (not, never, n't, etc.)", "Negative framing"],
+  ["social_word_ratio", "Social vocabulary / total (friend, alone, isolated, etc.)", "Relational content"],
+  ["emotion_word_ratio", "Emotion vocabulary / total (sad, empty, hopeless, etc.)", "Affective content"],
+  ["noun_ratio", "NOUN tokens / total", "Referential density"],
+  ["verb_ratio", "VERB tokens / total", "Action/state density"],
+  ["adj_ratio", "ADJ tokens / total", "Descriptive density"],
+  ["adv_ratio", "ADV tokens / total", "Modification density"],
 ]
 
-function SampleCard({ sample, isLonely }: { sample: PreprocessedSample; isLonely: boolean }) {
-  const [expanded, setExpanded] = useState(false)
-  const truncatedOriginal = sample.text.length > 300 ? sample.text.slice(0, 300) + '...' : sample.text
-  const truncatedCleaned = sample.cleaned.length > 300 ? sample.cleaned.slice(0, 300) + '...' : sample.cleaned
-
+function SampleCard({ sample, expanded, onToggle }: {
+  sample: PreprocessedSample
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const isLonely = sample.label === 1
   return (
-    <Card className="border-border">
-      <CardContent className="p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left - Original */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Badge variant="outline" className="font-mono text-xs">{sample.unique_id}</Badge>
-              <Badge className={isLonely ? 'bg-[#f43f5e] text-white' : 'bg-[#4C9BE8] text-white'}>
-                {isLonely ? 'LONELY' : 'NOT LONELY'}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Original text</p>
-              <p className="text-sm text-foreground leading-relaxed">
-                {expanded ? sample.text : truncatedOriginal}
-              </p>
-              {sample.text.length > 300 && (
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="p-0 h-auto text-primary"
-                  onClick={() => setExpanded(!expanded)}
-                >
-                  {expanded ? 'Show less' : 'Show more'}
-                </Button>
-              )}
-            </div>
+    <div className={`border rounded-xl overflow-hidden transition-all ${
+      isLonely ? "border-rose-600/20" : "border-blue-600/20"
+    }`}>
+      {/* Header */}
+      <div className={`px-4 py-3 flex items-center justify-between ${
+        isLonely ? "bg-rose-600/5" : "bg-blue-600/5"
+      }`}>
+        <div className="flex items-center gap-3">
+          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${
+            isLonely
+              ? "bg-rose-600/10 border-rose-600/20 text-rose-400"
+              : "bg-blue-600/10 border-blue-600/20 text-blue-400"
+          }`}>
+            {isLonely ? "LONELY" : "NOT LONELY"}
+          </span>
+          <span className="text-xs font-mono text-slate-600">{sample.unique_id}</span>
+        </div>
+        <button onClick={onToggle} className="text-slate-600 hover:text-slate-400 transition-colors">
+          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#1e1e2e]">
+        {/* Original text */}
+        <div className="p-4">
+          <p className="text-[10px] text-slate-600 font-mono uppercase mb-2">Original</p>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {expanded ? sample.text : sample.text.slice(0, 200) + (sample.text.length > 200 ? "…" : "")}
+          </p>
+        </div>
+
+        {/* Preprocessed */}
+        <div className="p-4">
+          <p className="text-[10px] text-slate-600 font-mono uppercase mb-2">After Preprocessing</p>
+          <p className="text-xs text-slate-500 leading-relaxed font-mono">
+            {expanded ? sample.cleaned : sample.cleaned.slice(0, 200) + (sample.cleaned.length > 200 ? "…" : "")}
+          </p>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-[#1e1e2e] p-4 bg-[#0a0a0f]">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {[
+              { k: "word_count", v: sample.word_count, label: "Words" },
+              { k: "char_count", v: sample.char_count, label: "Chars" },
+              { k: "sentence_count", v: sample.sentence_count, label: "Sentences" },
+              { k: "pronoun_ratio", v: fmt(sample.pronoun_ratio, 4), label: "Pronoun Ratio" },
+              { k: "negation_ratio", v: fmt(sample.negation_ratio, 4), label: "Negation Ratio" },
+              { k: "social_word_ratio", v: fmt(sample.social_word_ratio, 4), label: "Social Ratio" },
+              { k: "emotion_word_ratio", v: fmt(sample.emotion_word_ratio, 4), label: "Emotion Ratio" },
+            ].map(({ k, v, label }) => (
+              <div key={k} className="bg-[#111118] rounded-lg p-2.5">
+                <p className="text-[10px] text-slate-600 font-mono">{label}</p>
+                <p className="text-sm font-mono font-bold text-slate-200">{v}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Right - Preprocessed */}
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">After preprocessing</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {expanded ? sample.cleaned : truncatedCleaned}
-              </p>
-            </div>
-            
-            {/* Token previews */}
-            <div className="space-y-2">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Tokens (first 15)</p>
-                <div className="flex flex-wrap gap-1">
-                  {sample.tokens_preview.slice(0, 15).map((token, i) => (
-                    <Badge key={i} variant="secondary" className="font-mono text-xs px-1.5 py-0.5">
-                      {token}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Lemmas (first 15)</p>
-                <div className="flex flex-wrap gap-1">
-                  {sample.lemmas_preview.slice(0, 15).map((lemma, i) => (
-                    <Badge key={i} variant="outline" className="font-mono text-xs px-1.5 py-0.5">
-                      {lemma}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Mini feature grid */}
-            <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">words</p>
-                <p className="font-mono text-sm">{sample.word_count}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">sentences</p>
-                <p className="font-mono text-sm">{sample.sentence_count}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">pronoun</p>
-                <p className="font-mono text-sm">{sample.pronoun_ratio.toFixed(3)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">negation</p>
-                <p className="font-mono text-sm">{sample.negation_ratio.toFixed(3)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">social</p>
-                <p className="font-mono text-sm">{sample.social_word_ratio.toFixed(3)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">emotion</p>
-                <p className="font-mono text-sm">{sample.emotion_word_ratio.toFixed(3)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">TTR</p>
-                <p className="font-mono text-sm">{(sample.word_count > 0 ? sample.char_count / sample.word_count : 0).toFixed(2)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">chars</p>
-                <p className="font-mono text-sm">{sample.char_count}</p>
-              </div>
+          <div>
+            <p className="text-[10px] text-slate-600 font-mono uppercase mb-1.5">Token Preview (first 15)</p>
+            <div className="flex flex-wrap gap-1">
+              {sample.tokens_preview.slice(0, 15).map((t, i) => (
+                <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 bg-[#1e1e2e] text-slate-400 rounded">{t}</span>
+              ))}
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
+const ITEMS_PER_PAGE = 5
+
 export default function PreprocessingPage() {
-  const [split, setSplit] = useState('train')
-  const [labelFilter, setLabelFilter] = useState<'both' | 'lonely' | 'non_lonely'>('both')
-  const [sampleCount, setSampleCount] = useState(10)
+  const [summary, setSummary] = useState<PreprocessingSummary | null>(null)
+  const [samples, setSamples] = useState<PreprocessingSamples | null>(null)
+  const [split, setSplit] = useState("train")
+  const [labelFilter, setLabelFilter] = useState<"both" | "lonely" | "non_lonely">("both")
+  const [n, setN] = useState(20)
+  const [loading, setLoading] = useState(true)
+  const [samplesLoading, setSamplesLoading] = useState(false)
   const [page, setPage] = useState(0)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const { data: summary, error: summaryError, isLoading: summaryLoading } = useSWR<PreprocessingSummary>(
-    `${API}/eda/preprocessing/summary`,
-    fetcher
-  )
-
-  const { data: samples, error: samplesError, isLoading: samplesLoading } = useSWR<PreprocessingSamples>(
-    `${API}/eda/preprocessing/samples?split=${split}&label=${labelFilter}&n=${sampleCount}`,
-    fetcher
-  )
-
-  // Reset page when filters change
   useEffect(() => {
+    getPreprocessingSummary().then(setSummary).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    setSamplesLoading(true)
     setPage(0)
-  }, [split, labelFilter, sampleCount])
+    getPreprocessingSamples(split, labelFilter, n)
+      .then(setSamples)
+      .finally(() => setSamplesLoading(false))
+  }, [split, labelFilter, n])
 
-  const allSamples = samples ? [
-    ...(labelFilter === 'both' || labelFilter === 'lonely' ? samples.lonely.map(s => ({ ...s, isLonely: true })) : []),
-    ...(labelFilter === 'both' || labelFilter === 'non_lonely' ? samples.non_lonely.map(s => ({ ...s, isLonely: false })) : []),
-  ] : []
+  const allSamples: PreprocessedSample[] = samples
+    ? labelFilter === "lonely"
+      ? samples.lonely ?? []
+      : labelFilter === "non_lonely"
+      ? samples.non_lonely ?? []
+      : [...(samples.lonely ?? []), ...(samples.non_lonely ?? [])]
+    : []
 
-  const pageSize = 10
-  const totalPages = Math.ceil(allSamples.length / pageSize)
-  const paginatedSamples = allSamples.slice(page * pageSize, (page + 1) * pageSize)
+  const pageItems = allSamples.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(allSamples.length / ITEMS_PER_PAGE)
+
+  const toggleExpand = (id: string) => {
+    const next = new Set(expanded)
+    next.has(id) ? next.delete(id) : next.add(id)
+    setExpanded(next)
+  }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <PageHeader 
-        title="Data Preprocessing Pipeline" 
-        subtitle="Text normalisation, tokenisation, and linguistic feature extraction"
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Preprocessing Pipeline"
+        subtitle="Text normalisation, tokenisation, linguistic feature extraction, and stop word removal with negation preservation"
+        badge="Preprocessing"
       />
-      
-      <div className="flex-1 p-6 space-y-8">
-        {/* Pipeline Steps */}
-        <section>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Pipeline Steps</h3>
-          <div className="grid gap-3">
-            {pipelineSteps.map((step) => (
-              <Card key={step.num} className="border-border">
-                <CardContent className="p-4 flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-mono text-sm font-bold">
-                    {step.num}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium text-foreground">{step.name}</h4>
-                      <Badge variant="outline" className="font-mono text-xs">{step.tool}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">{step.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
 
-        {/* Feature Extraction Summary */}
-        <section>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Feature Extraction Summary</h3>
-          {summaryLoading ? (
-            <LoadingState message="Loading summary..." />
-          ) : summaryError ? (
-            <ErrorState message="Failed to load preprocessing summary" />
-          ) : summary ? (
-            <Card className="border-border">
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Badge variant={summary.status === 'done' ? 'default' : 'secondary'} className="gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {summary.status}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground font-mono">{summary.timestamp}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Train size</p>
-                    <p className="font-mono text-lg">{summary.train_size.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Val size</p>
-                    <p className="font-mono text-lg">{summary.val_size.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Test size</p>
-                    <p className="font-mono text-lg">{summary.test_size.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Feature columns</p>
-                  <div className="flex flex-wrap gap-1">
-                    {summary.feature_columns.map((col) => (
-                      <Badge key={col} variant="secondary" className="font-mono text-xs">
-                        {col}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-        </section>
-
-        {/* Linguistic Features Table */}
-        <section>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Linguistic Features</h3>
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left font-medium text-muted-foreground px-4 py-3">Feature</th>
-                      <th className="text-left font-medium text-muted-foreground px-4 py-3">Description</th>
-                      <th className="text-left font-medium text-muted-foreground px-4 py-3">Psycholinguistic Relevance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {featureDescriptions.map((f, idx) => (
-                      <tr key={f.feature} className={idx < featureDescriptions.length - 1 ? 'border-b border-border' : ''}>
-                        <td className="px-4 py-3 font-mono text-xs">{f.feature}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{f.description}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{f.relevance}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Sample Post Explorer */}
-        <section>
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Sample Post Explorer</h3>
-          
-          {/* Controls */}
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Split:</span>
-              <Select value={split} onValueChange={setSplit}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="train">Train</SelectItem>
-                  <SelectItem value="validation">Validation</SelectItem>
-                  <SelectItem value="test">Test</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Pipeline status */}
+      {!loading && summary && (
+        <SectionCard className="mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Status</p>
+              <span className={`text-xs font-mono px-2 py-1 rounded-full border ${
+                summary.status === "done"
+                  ? "bg-emerald-600/10 border-emerald-600/20 text-emerald-400"
+                  : "bg-amber-600/10 border-amber-600/20 text-amber-400"
+              }`}>{summary.status}</span>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Class:</span>
-              <Tabs value={labelFilter} onValueChange={(v) => setLabelFilter(v as typeof labelFilter)}>
-                <TabsList>
-                  <TabsTrigger value="both">Both</TabsTrigger>
-                  <TabsTrigger value="lonely">Lonely</TabsTrigger>
-                  <TabsTrigger value="non_lonely">Non-Lonely</TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Completed</p>
+              <p className="text-xs font-mono text-slate-300">{relativeTime(summary.timestamp)}</p>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Count:</span>
-              <Tabs value={String(sampleCount)} onValueChange={(v) => setSampleCount(Number(v))}>
-                <TabsList>
-                  <TabsTrigger value="5">5</TabsTrigger>
-                  <TabsTrigger value="10">10</TabsTrigger>
-                  <TabsTrigger value="20">20</TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Train / Val / Test</p>
+              <p className="text-xs font-mono text-slate-300">
+                {summary.train_size?.toLocaleString()} / {summary.val_size?.toLocaleString()} / {summary.test_size?.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Feature Columns</p>
+              <p className="text-xs font-mono text-violet-400">{summary.feature_columns?.length ?? 13}</p>
             </div>
           </div>
-
-          {/* Sample Cards */}
-          {samplesLoading ? (
-            <LoadingState message="Loading samples..." />
-          ) : samplesError ? (
-            <ErrorState message="Failed to load samples" />
-          ) : (
-            <div className="space-y-4">
-              {paginatedSamples.map((sample) => (
-                <SampleCard 
-                  key={sample.unique_id} 
-                  sample={sample} 
-                  isLonely={sample.isLonely} 
-                />
+          {summary.feature_columns && (
+            <div className="flex flex-wrap gap-1.5 mt-4">
+              {summary.feature_columns.map(f => (
+                <Tag key={f} color="violet">{f}</Tag>
               ))}
-              
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    disabled={page === 0}
-                    onClick={() => setPage(p => p - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {page + 1} of {totalPages}
-                  </span>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage(p => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
             </div>
           )}
-        </section>
-      </div>
+        </SectionCard>
+      )}
+
+      {/* Pipeline steps */}
+      <SectionCard title="Pipeline Steps" description="Applied in sequence to every post in all splits" className="mb-6">
+        <div className="space-y-3">
+          {PIPELINE_STEPS.map(({ n: num, title, tool, desc }) => (
+            <div key={num} className="flex gap-4">
+              <div className="flex-shrink-0 h-7 w-7 rounded-lg bg-violet-600/15 border border-violet-600/20 flex items-center justify-center">
+                <span className="text-xs font-mono font-bold text-violet-400">{num}</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-sm font-medium text-white">{title}</p>
+                  <Tag color="amber">{tool}</Tag>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Feature table */}
+      <SectionCard title="Extracted Linguistic Features" description="13 features computed per post after preprocessing" className="mb-6">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[#1e1e2e]">
+                <th className="text-left py-2 px-3 text-slate-500 font-mono">Feature</th>
+                <th className="text-left py-2 px-3 text-slate-500 font-mono">Description</th>
+                <th className="text-left py-2 px-3 text-slate-500 font-mono">Psycholinguistic Relevance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FEATURE_TABLE.map(([feat, desc, relevance]) => (
+                <tr key={feat} className="border-b border-[#1e1e2e]/50 hover:bg-white/2">
+                  <td className="py-2 px-3"><Tag color="violet">{feat}</Tag></td>
+                  <td className="py-2 px-3 text-slate-400">{desc}</td>
+                  <td className="py-2 px-3 text-slate-600">{relevance}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
+
+      {/* Sample explorer */}
+      <SectionCard title="Sample Post Explorer" description="Browse preprocessed examples from the dataset. See the full preprocessing pipeline output for each post.">
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-3 mb-5 pb-4 border-b border-[#1e1e2e]">
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Split</label>
+            <select
+              value={split}
+              onChange={e => setSplit(e.target.value)}
+              className="bg-[#111118] border border-[#1e1e2e] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-violet-600/50"
+            >
+              {["train", "validation", "test"].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Class Filter</label>
+            <select
+              value={labelFilter}
+              onChange={e => setLabelFilter(e.target.value as any)}
+              className="bg-[#111118] border border-[#1e1e2e] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-violet-600/50"
+            >
+              <option value="both">Both</option>
+              <option value="lonely">Lonely only</option>
+              <option value="non_lonely">Non-Lonely only</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Samples</label>
+            <select
+              value={n}
+              onChange={e => setN(Number(e.target.value))}
+              className="bg-[#111118] border border-[#1e1e2e] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-violet-600/50"
+            >
+              {[10, 20, 50].map(v => (
+                <option key={v} value={v}>{v} per class</option>
+              ))}
+            </select>
+          </div>
+          <div className="ml-auto">
+            <p className="text-xs text-slate-600 font-mono">{allSamples.length} total · page {page + 1}/{totalPages || 1}</p>
+          </div>
+        </div>
+
+        {samplesLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} lines={2} />)}
+          </div>
+        ) : allSamples.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <>
+            <div className="space-y-3">
+              {pageItems.map(sample => (
+                <SampleCard
+                  key={sample.unique_id}
+                  sample={sample}
+                  expanded={expanded.has(sample.unique_id)}
+                  onToggle={() => toggleExpand(sample.unique_id)}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-5">
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs border border-[#1e1e2e] rounded-lg text-slate-400 hover:text-slate-200 disabled:opacity-30 transition-all"
+                >
+                  <ChevronLeft className="h-3 w-3" /> Prev
+                </button>
+                <span className="text-xs font-mono text-slate-600">{page + 1} / {totalPages}</span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs border border-[#1e1e2e] rounded-lg text-slate-400 hover:text-slate-200 disabled:opacity-30 transition-all"
+                >
+                  Next <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </SectionCard>
     </div>
   )
 }

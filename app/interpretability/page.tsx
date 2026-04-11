@@ -1,372 +1,265 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { PageHeader } from '@/components/shared/page-header'
-import { LoadingState } from '@/components/shared/loading-state'
-import { ErrorState } from '@/components/shared/error-state'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useEffect, useState } from "react"
 import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
-import { AlertTriangle, Info } from 'lucide-react'
-import { getInterpretabilitySummary, getLrCoefficients, getAttention } from '@/lib/api'
-import type { InterpretabilitySummary, LrCoefficients, AttentionData } from '@/lib/types'
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine,
+  BarChart, Bar, Cell,
+} from "recharts"
+import {
+  getInterpretabilitySummary, getLrCoefficients, getAttention, plotUrl,
+} from "@/lib/api"
+import type { InterpretabilitySummary, LrCoefficients, AttentionData } from "@/lib/types"
+import { TOOLTIP_STYLE, REP_COLOURS, repLabel, fmt } from "@/lib/utils"
+import {
+  PageHeader, SectionCard, PlotImage, EmptyState,
+  SkeletonCard, Tag, Callout, RepresentationBadge,
+} from "@/components/shared"
 
-const TOOLTIP_STYLE = {
-  contentStyle: { backgroundColor: '#1e1e2e', border: '1px solid #2e2e3e', borderRadius: '8px' },
-  labelStyle: { color: '#e2e8f0' },
-  itemStyle: { color: '#ffffff' },
-}
+const COEFF_TABS = ["linguistic_only", "tfidf", "tfidf_ling"] as const
+type CoeffTab = (typeof COEFF_TABS)[number]
 
-const representationKeys = ['linguistic', 'tfidf', 'tfidf_linguistic', 'word2vec', 'sbert', 'distilbert']
+const SCORE_DOTS = (score: number) =>
+  Array.from({ length: 5 }, (_, i) => (
+    <span key={i} className={`h-2 w-2 rounded-full inline-block mr-0.5 ${i < score ? "bg-violet-500" : "bg-[#1e1e2e]"}`} />
+  ))
 
-function InterpretabilityContent() {
+export default function InterpretabilityPage() {
   const [summary, setSummary] = useState<InterpretabilitySummary | null>(null)
   const [coefficients, setCoefficients] = useState<Record<string, LrCoefficients>>({})
   const [attention, setAttention] = useState<AttentionData | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [coeffTab, setCoeffTab] = useState<CoeffTab>("linguistic_only")
   const [loading, setLoading] = useState(true)
-  const [activeCoeffTab, setActiveCoeffTab] = useState('linguistic')
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const [summaryData, attentionData] = await Promise.all([
-          getInterpretabilitySummary(),
-          getAttention(),
-        ])
-        setSummary(summaryData)
-        setAttention(attentionData)
-
-        // Fetch coefficients for each representation
-        const coeffMap: Record<string, LrCoefficients> = {}
-        for (const rep of representationKeys) {
-          try {
-            const coeffData = await getLrCoefficients(rep)
-            coeffMap[rep] = coeffData
-          } catch {
-            // Skip if representation not available
-          }
-        }
-        setCoefficients(coeffMap)
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch interpretability data')
-        setSummary(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
+    Promise.allSettled([
+      getInterpretabilitySummary(),
+      getLrCoefficients("linguistic_only"),
+      getLrCoefficients("tfidf"),
+      getLrCoefficients("tfidf_ling"),
+      getAttention(),
+    ]).then(([s, lo, tf, tfl, at]) => {
+      if (s.status === "fulfilled") setSummary(s.value)
+      const coeffs: Record<string, LrCoefficients> = {}
+      if (lo.status === "fulfilled") coeffs["linguistic_only"] = lo.value
+      if (tf.status === "fulfilled") coeffs["tfidf"] = tf.value
+      if (tfl.status === "fulfilled") coeffs["tfidf_ling"] = tfl.value
+      setCoefficients(coeffs)
+      if (at.status === "fulfilled") setAttention(at.value)
+      setLoading(false)
+    })
   }, [])
 
-  if (error) {
-    return <ErrorState message={error} />
-  }
+  const scatterData = summary
+    ? Object.entries(summary).map(([rep, data]) => ({
+        rep,
+        x: data.interpretability_score,
+        y: data.best_f1,
+        model: data.best_model,
+        cost: data.computational_cost,
+      }))
+    : []
 
-  if (loading || !summary) {
-    return <LoadingState message="Loading interpretability analysis..." />
-  }
+  const activeCoeff = coefficients[coeffTab]
 
-  // Prepare scatter data for trade-off chart
-  const tradeoffData = representationKeys
-    .map((rep) => {
-      const item = summary[rep]
-      if (!item) return null
+  const getCoeffData = () => {
+    if (!activeCoeff) return { lonely: [], nonLonely: [] }
+    if (activeCoeff.features_ranked) {
+      const lonely = activeCoeff.features_ranked.filter(f => f.direction === "lonely").slice(0, 13)
+      const nonLonely = activeCoeff.features_ranked.filter(f => f.direction === "non_lonely").slice(0, 13)
       return {
-        representation: rep,
-        interpretability_score: item.interpretability_score,
-        f1: item.best_f1,
+        lonely: lonely.map(f => ({ feature: f.feature, coefficient: Math.abs(f.coefficient) })),
+        nonLonely: nonLonely.map(f => ({ feature: f.feature, coefficient: Math.abs(f.coefficient) })),
       }
-    })
-    .filter((item) => item !== null)
-
-  // Interpretability cards
-  const repCards = representationKeys.map((rep) => {
-    const item = summary[rep]
-    if (!item) return null
-    return {
-      representation: rep,
-      score: item.interpretability_score,
-      rationale: item.interpretability_rationale,
-      cost: item.computational_cost,
-      f1: item.best_f1,
     }
-  }).filter((card): card is NonNullable<typeof card> => card !== null)
+    return {
+      lonely: (activeCoeff.lonely_indicators ?? []).slice(0, 25).map(f => ({ feature: f.feature, coefficient: Math.abs(f.coefficient) })),
+      nonLonely: (activeCoeff.non_lonely_indicators ?? []).slice(0, 25).map(f => ({ feature: f.feature, coefficient: Math.abs(f.coefficient) })),
+    }
+  }
+
+  const { lonely: lonelyCoeffs, nonLonely: nonLonelyCoeffs } = getCoeffData()
 
   return (
-    <>
-      {/* Interpretability Scale Explainer */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="flex gap-3 pt-6">
-          <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium text-foreground mb-2">Interpretability Scale (1-5)</p>
-            <p>
-              <strong>5</strong> = Fully interpretable (direct feature coefficients with semantic meaning)<br />
-              <strong>4</strong> = Highly interpretable (individual features can be examined)<br />
-              <strong>3</strong> = Moderately interpretable (requires visualization techniques)<br />
-              <strong>2</strong> = Low interpretability (dense embeddings, limited insight)<br />
-              <strong>1</strong> = Black-box (neural network internals not directly accessible)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Trade-off Scatter Chart */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">F1 vs Interpretability Trade-off</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    type="number"
-                    dataKey="interpretability_score"
-                    domain={[0, 5]}
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                    label={{
-                      value: 'Interpretability Score (1-5)',
-                      position: 'insideBottom',
-                      offset: -10,
-                      style: { fill: 'var(--muted-foreground)', fontSize: 11 },
-                    }}
-                  />
-                  <YAxis
-                    type="number"
-                    dataKey="f1"
-                    domain={[0, 1]}
-                    stroke="var(--muted-foreground)"
-                    fontSize={12}
-                    label={{
-                      value: 'F1 Score',
-                      angle: -90,
-                      position: 'insideLeft',
-                      style: { fill: 'var(--muted-foreground)', fontSize: 11 },
-                    }}
-                  />
-                  <Tooltip
-                    {...TOOLTIP_STYLE}
-                    formatter={(value: any) => [
-                      typeof value === 'number' ? value.toFixed(3) : String(value),
-                    ]}
-                  />
-                  <Scatter
-                    data={tradeoffData}
-                    fill="oklch(0.55 0.25 285)"
-                    name="Representations"
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Representation Cards */}
-      <section>
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">
-          Interpretability Scores by Representation
-        </h3>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {repCards.map((rep) => (
-            <Card key={rep.representation} className="hover:border-primary/30 transition-colors">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium capitalize">
-                    {rep.representation.replace(/_/g, ' ')}
-                  </CardTitle>
-                  <Badge variant="outline" className="font-mono">
-                    {rep.score}/5
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Rationale</p>
-                  <p className="text-sm text-foreground">{rep.rationale}</p>
-                </div>
-                <div className="pt-2 border-t border-border">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Computational Cost</span>
-                    <span className="text-sm font-medium">{rep.cost}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-muted-foreground">Best F1</span>
-                    <span className="text-sm font-mono font-semibold">{rep.f1.toFixed(3)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* LR Coefficients */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Feature Coefficients (Logistic Regression)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeCoeffTab} onValueChange={setActiveCoeffTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                {['linguistic', 'tfidf', 'sbert'].map((rep) => (
-                  <TabsTrigger key={rep} value={rep} className="capitalize">
-                    {rep.replace(/_/g, ' ')}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {['linguistic', 'tfidf', 'sbert'].map((rep) => {
-                const coeff = coefficients[rep]
-                if (!coeff) return null
-
-                return (
-                  <TabsContent key={rep} value={rep} className="space-y-4">
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      {/* Lonely Indicators */}
-                      <div>
-                        <h4 className="font-medium text-sm mb-3">Lonely Indicators (Positive)</h4>
-                        <div className="space-y-2">
-                          {coeff.lonely_indicators.slice(0, 5).map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                            >
-                              <span className="text-sm text-foreground truncate">
-                                {item.feature}
-                              </span>
-                              <span className="text-sm font-mono font-semibold text-[oklch(0.65_0.2_15)]">
-                                {item.coefficient.toFixed(4)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Non-Lonely Indicators */}
-                      <div>
-                        <h4 className="font-medium text-sm mb-3">Non-Lonely Indicators (Negative)</h4>
-                        <div className="space-y-2">
-                          {coeff.non_lonely_indicators.slice(0, 5).map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                            >
-                              <span className="text-sm text-foreground truncate">
-                                {item.feature}
-                              </span>
-                              <span className="text-sm font-mono font-semibold text-[oklch(0.65_0.18_250)]">
-                                {item.coefficient.toFixed(4)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-                )
-              })}
-            </Tabs>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* DistilBERT Attention */}
-      {attention && (
-        <section>
-          <Card className="border-[oklch(0.65_0.18_250)]/30">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-base">DistilBERT Attention Analysis</CardTitle>
-                <Badge variant="outline" className="bg-yellow-500/10 border-yellow-500/30">
-                  ⚠️ Caveat
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-foreground">
-                <div className="flex gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
-                  <p>{attention.caveat}</p>
-                </div>
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                {/* Lonely Top Tokens */}
-                <div>
-                  <h4 className="font-medium text-sm mb-3">Top Attended Tokens (Lonely)</h4>
-                  <div className="space-y-2">
-                    {attention.lonely_top_tokens.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                      >
-                        <span className="text-sm font-mono text-foreground">
-                          {item.token}
-                        </span>
-                        <span className="text-sm font-mono font-semibold text-[oklch(0.65_0.2_15)]">
-                          {item.avg_attention.toFixed(4)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Non-Lonely Top Tokens */}
-                <div>
-                  <h4 className="font-medium text-sm mb-3">Top Attended Tokens (Non-Lonely)</h4>
-                  <div className="space-y-2">
-                    {attention.non_lonely_top_tokens.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                      >
-                        <span className="text-sm font-mono text-foreground">
-                          {item.token}
-                        </span>
-                        <span className="text-sm font-mono font-semibold text-[oklch(0.65_0.18_250)]">
-                          {item.avg_attention.toFixed(4)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-    </>
-  )
-}
-
-export default function InterpretabilityPage() {
-  return (
-    <div className="flex flex-col min-h-screen">
+    <div className="animate-fade-in">
       <PageHeader
-        title="Model Interpretability"
-        subtitle="RQ4: Trade-offs between predictive power and interpretability"
+        title="Interpretability Analysis"
+        subtitle="RQ4: What trade-offs exist between predictive performance and interpretability across representations?"
+        badge="Interpretability"
       />
 
-      <div className="flex-1 p-6 space-y-8">
-        <InterpretabilityContent />
+      <Callout type="info" className="mb-6">
+        Interpretability is scored 1–5 (higher = more interpretable). Score 5 means a domain expert can audit every prediction from named feature coefficients. Score 1 means predictions rely on opaque internal representations.
+      </Callout>
+
+      {/* Trade-off scatter */}
+      <SectionCard title="Performance vs Interpretability Trade-off" description="Each point represents the best model for that representation" className="mb-6">
+        {loading ? <SkeletonCard /> : scatterData.length === 0 ? <EmptyState /> : (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                <XAxis
+                  type="number" dataKey="x" domain={[0.5, 5.5]}
+                  label={{ value: "Interpretability Score →", position: "insideBottom", offset: -10, fill: "#64748b", fontSize: 11 }}
+                  stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }}
+                  ticks={[1, 2, 3, 4, 5]}
+                />
+                <YAxis
+                  type="number" dataKey="y" domain={[0.85, 1]}
+                  label={{ value: "Val F1 →", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 11 }}
+                  stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }}
+                  tickFormatter={v => fmt(v, 2)}
+                />
+                <Tooltip
+                  {...TOOLTIP_STYLE}
+                  content={({ payload }) => {
+                    if (!payload?.length) return null
+                    const d = payload[0]?.payload
+                    return (
+                      <div className="bg-[#1e1e2e] border border-[#2e2e3e] rounded-lg p-3 text-xs font-mono">
+                        <p className="text-violet-400 font-bold mb-1">{repLabel(d.rep)}</p>
+                        <p className="text-slate-300">Interpretability: {d.x}/5</p>
+                        <p className="text-slate-300">Best Val F1: {fmt(d.y, 4)}</p>
+                        <p className="text-slate-500">Cost: {d.cost}</p>
+                      </div>
+                    )
+                  }}
+                />
+                <ReferenceLine x={3.5} stroke="#2e2e3e" strokeDasharray="4 4" label={{ value: "High interp.", fill: "#64748b", fontSize: 9 }} />
+                <Scatter
+                  data={scatterData}
+                  fill="#7c3aed"
+                  shape={(props: any) => {
+                    const { cx, cy, payload } = props
+                    const color = REP_COLOURS[payload.rep] ?? "#7c3aed"
+                    return (
+                      <g>
+                        <circle cx={cx} cy={cy} r={10} fill={color} fillOpacity={0.3} stroke={color} strokeWidth={2} />
+                        <text x={cx} y={cy - 15} textAnchor="middle" fontSize={9} fill={color} fontFamily="JetBrains Mono">
+                          {repLabel(payload.rep).slice(0, 10)}
+                        </text>
+                      </g>
+                    )
+                  }}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        <PlotImage src={plotUrl("models", "interp_representation_tradeoff.png")} alt="Trade-off scatter" caption="Static output: interp_representation_tradeoff.png" className="mt-4" />
+      </SectionCard>
+
+      {/* Per-rep cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {loading ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} lines={3} />) : !summary ? null :
+          Object.entries(summary).map(([rep, data]) => (
+            <div key={rep} className="bg-[#111118] border border-[#1e1e2e] rounded-xl p-4">
+              <div className="flex items-start justify-between mb-3">
+                <RepresentationBadge rep={rep} />
+                <div className="flex items-center gap-0.5">{SCORE_DOTS(data.interpretability_score)}</div>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed mb-3">{data.interpretability_rationale}</p>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(data.top_lonely_features ?? data.top_lonely_tokens ?? []).slice(0, 4).map(f => (
+                  <span key={f} className="text-[10px] font-mono px-1.5 py-0.5 bg-rose-600/10 border border-rose-600/20 text-rose-400 rounded">{f}</span>
+                ))}
+              </div>
+              <p className="text-[10px] font-mono text-slate-700">Cost: {data.computational_cost}</p>
+              <p className="text-[10px] font-mono text-emerald-500 mt-0.5">Best F1: {fmt(data.best_f1, 4)} ({data.best_model})</p>
+            </div>
+          ))
+        }
       </div>
+
+      {/* LR Coefficients */}
+      <SectionCard title="Logistic Regression Coefficients" description="Feature importances for interpretable representations" className="mb-6">
+        <div className="flex gap-2 mb-5">
+          {COEFF_TABS.map(t => (
+            <button
+              key={t}
+              onClick={() => setCoeffTab(t)}
+              className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all ${
+                coeffTab === t
+                  ? "bg-violet-600/20 border-violet-600/30 text-violet-300"
+                  : "border-[#1e1e2e] text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              {repLabel(t)}
+            </button>
+          ))}
+        </div>
+
+        {loading ? <SkeletonCard /> : !activeCoeff ? <EmptyState /> : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: "Lonely Indicators", data: lonelyCoeffs, color: "#f43f5e" },
+              { label: "Non-Lonely Indicators", data: nonLonelyCoeffs, color: "#4C9BE8" },
+            ].map(({ label, data, color }) => (
+              <div key={label}>
+                <p className="text-xs font-medium text-slate-400 mb-3">{label}</p>
+                {data.length === 0 ? <p className="text-xs text-slate-600">No data</p> : (
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[...data].reverse()}
+                        layout="vertical"
+                        margin={{ top: 0, right: 20, left: 110, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" horizontal={false} />
+                        <XAxis type="number" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} tickFormatter={v => fmt(v, 3)} />
+                        <YAxis type="category" dataKey="feature" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} width={105} />
+                        <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 6)} />
+                        <Bar dataKey="coefficient" fill={color} fillOpacity={0.8} radius={[0, 4, 4, 0]} barSize={10} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <PlotImage
+          src={plotUrl("models", `interp_${coeffTab}_lr_coefficients.png`)}
+          alt="LR coefficients"
+          caption={`interp_${coeffTab}_lr_coefficients.png`}
+          className="mt-4"
+        />
+      </SectionCard>
+
+      {/* DistilBERT Attention */}
+      <SectionCard title="DistilBERT Attention Weights" description="Average last-layer attention weights per class (indicative, not faithful attribution)">
+        <Callout type="warning" className="mb-4">
+          {attention?.caveat ?? "Attention ≠ attribution. These show which tokens the model attends to, not necessarily what drives predictions."}
+        </Callout>
+        {loading ? <SkeletonCard /> : !attention ? <EmptyState /> : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: "Lonely Posts", tokens: attention.lonely_top_tokens, color: "#f43f5e" },
+              { label: "Non-Lonely Posts", tokens: attention.non_lonely_top_tokens, color: "#4C9BE8" },
+            ].map(({ label, tokens, color }) => (
+              <div key={label}>
+                <p className="text-xs font-medium text-slate-400 mb-3">{label} — top {Math.min(15, tokens.length)} attended tokens</p>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[...tokens].slice(0, 15).reverse()}
+                      layout="vertical"
+                      margin={{ top: 0, right: 20, left: 70, bottom: 0 }}
+                    >
+                      <XAxis type="number" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} tickFormatter={v => v.toFixed(4)} />
+                      <YAxis type="category" dataKey="token" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} width={65} />
+                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 6)} />
+                      <Bar dataKey="avg_attention" fill={color} fillOpacity={0.8} radius={[0, 4, 4, 0]} barSize={10} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <PlotImage src={plotUrl("models", "interp_distilbert_attention.png")} alt="DistilBERT attention" caption="interp_distilbert_attention.png" className="mt-4" />
+      </SectionCard>
     </div>
   )
 }
