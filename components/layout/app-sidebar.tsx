@@ -85,7 +85,7 @@ function SidebarNav({
       </SidebarHeader>
 
       {/* Main navigation */}
-      <SidebarContent className="py-4">
+      <SidebarContent className="py-4 flex-1 overflow-y-auto">
         <SidebarGroup>
           {!isCollapsed && (
             <SidebarGroupLabel className="text-[10px] text-slate-600 uppercase tracking-wider font-mono px-3 mb-1">
@@ -215,17 +215,17 @@ function SidebarNav({
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-[#1e1e2e] px-3 py-4">
+      <SidebarFooter className="border-t border-[#1e1e2e] px-3 py-3 flex-shrink-0">
         {/* External links */}
         {!isCollapsed && (
-          <div className="space-y-0.5 mb-4">
+          <div className="space-y-0.5 mb-2.5">
             {EXTERNAL_LINKS.map(({ href, icon: Icon, label }) => (
               <a
                 key={href}
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[11px] text-slate-600 hover:text-slate-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+                className="flex items-center gap-2 text-[10px] text-slate-600 hover:text-slate-400 transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
               >
                 <Icon className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate flex-1">{label}</span>
@@ -237,8 +237,8 @@ function SidebarNav({
 
         {/* Pipeline progress bar */}
         {!isCollapsed && (
-          <div className="px-2 py-4 border-t border-[#1e1e2e]">
-            <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2 font-mono">
+          <div className="px-2 py-3 border-t border-[#1e1e2e]">
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5 font-mono">
               Pipeline
             </p>
             {loading ? (
@@ -272,7 +272,7 @@ function SidebarNav({
                     )
                   })}
                 </div>
-                <p className="text-[10px] text-slate-600 mt-1.5 font-mono">
+                <p className="text-[10px] text-slate-600 mt-1 font-mono">
                   {completed.size} / {Object.keys(PIPELINE_STEP_LABELS).length} complete
                 </p>
               </>
@@ -283,7 +283,7 @@ function SidebarNav({
         )}
 
         {/* Collapse / expand toggle */}
-        <div className="pt-3 border-t border-[#1e1e2e]/50 mt-2">
+        <div className="pt-2 border-t border-[#1e1e2e]/50 mt-1">
           <SidebarTrigger
             className={cn(
               "w-full flex items-center gap-2 text-xs text-slate-600",
