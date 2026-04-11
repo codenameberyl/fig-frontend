@@ -118,7 +118,7 @@ export default function DocsPage() {
             <h2 className="text-lg font-bold text-white mb-4">Project Overview</h2>
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
               This project builds and evaluates an NLP pipeline for detecting loneliness self-disclosure in Reddit posts
-              using the FIG-Loneliness dataset. Loneliness self-disclosure is often subtle and indirect — expressed
+              using the FIG-Loneliness dataset. Loneliness self-disclosure is often subtle and indirect, expressed
               through linguistic markers of social disconnection and relational dissatisfaction rather than direct
               statements. The pipeline compares five text representations and three classical classifiers, plus a
               fine-tuned DistilBERT model.
@@ -244,7 +244,7 @@ tokens_no_stop = [                              # 6. Stopword removal
             {models && (
               <Callout type="success">
                 Best model: <strong>{repLabel(models.best_representation)}</strong> / <strong>{modelLabel(models.best_model)}</strong> —
-                Validation F1: <strong className="font-mono">{fmt(models.best_f1, 4)}</strong>
+                Validation F1: <strong className="font-mono mb-4">{fmt(models.best_f1, 4)}</strong>
               </Callout>
             )}
             <CodeBlock lang="python" code={`# DistilBERT fine-tuning
