@@ -68,12 +68,20 @@ function SidebarNav({
   return (
     <TooltipProvider delayDuration={0}>
       {/* Logo */}
-      <SidebarHeader className={cn(
-        "border-b border-[#1e1e2e] px-4 py-4",
-        !isCollapsed && "flex items-center justify-between",
-        isCollapsed && "flex flex-col items-center gap-2"
-      )}>
-        <div className="flex items-center gap-3">
+      <SidebarHeader
+        className={cn(
+          "border-b border-[#1e1e2e] px-4 py-4 flex transition-all duration-200 ease-linear",
+          isCollapsed
+            ? "flex-col items-center gap-2"
+            : "flex-row items-center justify-between"
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            isCollapsed && "flex-col gap-2"
+          )}
+        >
           <div className="h-8 w-8 rounded-lg bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
             <Brain className="h-4 w-4 text-violet-400" />
           </div>
@@ -88,11 +96,9 @@ function SidebarNav({
         </div>
         <SidebarTrigger
           className={cn(
-            "flex items-center gap-2 text-xs text-slate-600",
-            "hover:text-slate-400 rounded-lg hover:bg-white/5 transition-all",
-            "border border-transparent hover:border-[#1e1e2e]",
-            !isCollapsed && "h-8 w-8 flex-shrink-0 justify-center px-0",
-            isCollapsed && "h-8 w-8 justify-center px-0"
+            "flex items-center justify-center rounded-lg transition-all",
+            "hover:bg-white/5 border border-transparent hover:border-[#1e1e2e]",
+            "h-8 w-8 flex-shrink-0"
           )}
         >
           <PanelLeft className="h-3.5 w-3.5" />
