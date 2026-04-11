@@ -134,7 +134,7 @@ export default function ModelDetailPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
                     <XAxis dataKey="fpr" stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} label={{ value: "FPR", position: "insideBottom", offset: -2, fill: "#64748b", fontSize: 10 }} />
                     <YAxis stroke="#64748b" tick={{ fontSize: 10 }} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
-                    <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 4)} />
+                    <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
                     <ReferenceLine x={0} y={0} stroke="#2e2e3e" strokeDasharray="4 4" />
                     <Line
                       type="linear"

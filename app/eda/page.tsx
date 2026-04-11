@@ -370,7 +370,7 @@ export default function EDAPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
                       <XAxis dataKey="pos" stroke="#64748b" tick={{ fontSize: 11, fontFamily: "JetBrains Mono" }} />
                       <YAxis stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={v => `${(v * 100).toFixed(0)}%`} />
-                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => `${(v * 100).toFixed(2)}%`} />
+                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? `${(v * 100).toFixed(2)}%` : v} />
                       <Legend wrapperStyle={{ color: "#e2e8f0", fontSize: 12 }} />
                       <Bar dataKey="Non-Lonely" fill={NON_LONELY_COLOR} radius={[4, 4, 0, 0]} />
                       <Bar dataKey="Lonely" fill={LONELY_COLOR} radius={[4, 4, 0, 0]} />

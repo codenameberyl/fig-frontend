@@ -197,7 +197,7 @@ export default function ModelsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
                 <XAxis dataKey="rep" stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} />
                 <YAxis stroke="#64748b" domain={[0.8, 1]} tick={{ fontSize: 10 }} tickFormatter={v => fmt(v, 2)} />
-                <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 4)} />
+                <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
                 <Legend wrapperStyle={{ color: "#e2e8f0", fontSize: 11 }} />
                 <Bar dataKey="F1" fill="#7c3aed" radius={[4, 4, 0, 0]}>
                   {radarData.map((r, i) => (

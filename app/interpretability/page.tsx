@@ -209,7 +209,7 @@ export default function InterpretabilityPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" horizontal={false} />
                         <XAxis type="number" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} tickFormatter={v => fmt(v, 3)} />
                         <YAxis type="category" dataKey="feature" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} width={105} />
-                        <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 6)} />
+                        <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 6) : v} />
                         <Bar dataKey="coefficient" fill={color} fillOpacity={0.8} radius={[0, 4, 4, 0]} barSize={10} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -249,7 +249,7 @@ export default function InterpretabilityPage() {
                     >
                       <XAxis type="number" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} tickFormatter={v => v.toFixed(4)} />
                       <YAxis type="category" dataKey="token" stroke="#64748b" tick={{ fontSize: 9, fontFamily: "JetBrains Mono" }} width={65} />
-                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: number) => fmt(v, 6)} />
+                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 6) : v} />
                       <Bar dataKey="avg_attention" fill={color} fillOpacity={0.8} radius={[0, 4, 4, 0]} barSize={10} />
                     </BarChart>
                   </ResponsiveContainer>
