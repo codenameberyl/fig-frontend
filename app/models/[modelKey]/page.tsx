@@ -136,6 +136,9 @@ export default function ModelDetailPage() {
                     <YAxis type="number" domain={[-0.05, 1.05]} ticks={[0.0, 0.2, 0.4, 0.6, 0.8, 1]} stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
                     <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
                     <ReferenceLine x={0} y={0} stroke="#2e2e3e" strokeDasharray="4 4" />
+                    {/* Optimal Threshold Visuals */}
+                    <ReferenceLine x={roc.optimal_fpr} stroke="#a78bfa" strokeDasharray="3 3" label={{ value: "Optimal", fill: "#a78bfa", fontSize: 8, position: 'insideTopLeft' }} />
+                    <ReferenceLine y={roc.optimal_tpr} stroke="#a78bfa" strokeDasharray="3 3" />
                     <Line
                       type="linear"
                       dataKey="tpr"
@@ -146,6 +149,14 @@ export default function ModelDetailPage() {
                     />
                     {/* Diagonal baseline */}
                     <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }] as any} stroke="#2e2e3e" strokeDasharray="4 4" />
+                    {/* The Dot marking the exact intersection */}
+                    <Dot 
+                      cx={/* logic to convert FPR to coordinate */} 
+                      cy={/* logic to convert TPR to coordinate */} 
+                      r={4} 
+                      fill="#a78bfa" 
+                      stroke="#fff" 
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
