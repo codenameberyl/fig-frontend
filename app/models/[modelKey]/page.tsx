@@ -162,8 +162,6 @@ export default function ModelDetailPage() {
                             fontSize: 10,
                           }}
                         />
-                        <ReferenceLine x={roc.optimal_fpr} stroke="#facc15" strokeDasharray="4 4" />
-                        <ReferenceLine y={roc.optimal_tpr} stroke="#facc15" strokeDasharray="4 4" />
                       </>
                     )}
                   </LineChart>
