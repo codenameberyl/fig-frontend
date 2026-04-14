@@ -121,7 +121,7 @@ function SidebarNav({
                     asChild
                     isActive={active}
                     className={cn(
-                      "relative transition-all group mb-1 px-3 py-3 text-slate-400 hover:text-slate-200 bg-transparent hover:bg-white/5",
+                      "relative transition-all group h-auto mb-1 px-3 py-3 text-slate-400 hover:text-slate-200 bg-transparent hover:bg-white/5",
                       active
                         ? "bg-violet-600/15 text-violet-300 hover:bg-violet-600/20 hover:text-violet-200"
                         : ""
@@ -195,7 +195,7 @@ function SidebarNav({
                         asChild
                         isActive={pathname === "/docs"}
                         className={cn(
-                          "transition-all mb-1 px-3 py-3",
+                          "transition-all h-auto",
                           pathname === "/docs"
                             ? "bg-violet-600/15 text-violet-300"
                             : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
