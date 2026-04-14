@@ -198,7 +198,7 @@ function SidebarNav({
                           "transition-all h-auto px-3 py-3",
                           pathname === "/docs"
                             ? "!bg-violet-600/15 !text-violet-300"
-                            : "!text-slate-400 !hover:text-slate-200 !hover:bg-white/5"
+                            : "!bg-transparent !text-slate-400 !hover:text-slate-200 !hover:bg-white/5"
                         )}
                       >
                         <Link href="/docs">
