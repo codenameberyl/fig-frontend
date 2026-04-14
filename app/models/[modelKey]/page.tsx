@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer, Dot,
+  Tooltip, ReferenceLine, ResponsiveContainer, ReferenceDot,
 } from "recharts"
 import { getFullReport, plotUrl } from "@/lib/api"
 import type { TestReport } from "@/lib/types"
@@ -136,9 +136,6 @@ export default function ModelDetailPage() {
                     <YAxis type="number" domain={[-0.05, 1.05]} ticks={[0.0, 0.2, 0.4, 0.6, 0.8, 1]} stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
                     <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
                     <ReferenceLine x={0} y={0} stroke="#2e2e3e" strokeDasharray="4 4" />
-                    {/* Optimal Threshold Visuals */}
-                    <ReferenceLine x={roc.optimal_fpr} stroke="#a78bfa" strokeDasharray="3 3" label={{ value: "Optimal", fill: "#a78bfa", fontSize: 8, position: 'insideTopLeft' }} />
-                    <ReferenceLine y={roc.optimal_tpr} stroke="#a78bfa" strokeDasharray="3 3" />
                     <Line
                       type="linear"
                       dataKey="tpr"
@@ -149,16 +146,26 @@ export default function ModelDetailPage() {
                     />
                     {/* Diagonal baseline */}
                     <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }] as any} stroke="#2e2e3e" strokeDasharray="4 4" />
-                    {/* The Dot marking the exact intersection */}
-                    <ReferenceDot 
-                      x={roc.optimal_fpr} 
-                      y={roc.optimal_tpr} 
-                      r={5} 
-                      fill="#a78bfa" 
-                      stroke="#fff" 
-                      strokeWidth={2} 
-                      isFront={true} 
-                    />
+                    {roc && (
+                      <>
+                        <ReferenceDot
+                          x={roc.optimal_fpr}
+                          y={roc.optimal_tpr}
+                          r={4}
+                          fill="#facc15"
+                          stroke="#fff"
+                          strokeWidth={1.5}
+                          label={{
+                            value: `T=${roc.optimal_threshold.toFixed(2)}`,
+                            position: "top",
+                            fill: "#facc15",
+                            fontSize: 10,
+                          }}
+                        />
+                        <ReferenceLine x={roc.optimal_fpr} stroke="#facc15" strokeDasharray="4 4" />
+                        <ReferenceLine y={roc.optimal_tpr} stroke="#facc15" strokeDasharray="4 4" />
+                      </>
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
