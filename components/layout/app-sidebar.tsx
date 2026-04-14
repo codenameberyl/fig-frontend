@@ -121,10 +121,10 @@ function SidebarNav({
                     asChild
                     isActive={active}
                     className={cn(
-                      "relative transition-all h-9 group mb-1 px-3 py-2.5",
+                      "relative transition-all group mb-1 px-3 py-3 text-slate-400 hover:text-slate-200 bg-transparent hover:bg-white/5",
                       active
                         ? "bg-violet-600/15 text-violet-300 hover:bg-violet-600/20 hover:text-violet-200"
-                        : "text-slate-400 hover:text-slate-200 bg-transparent hover:bg-white/5"
+                        : ""
                     )}
                   >
                     <Link href={href} className="flex items-center gap-3 w-full relative">
