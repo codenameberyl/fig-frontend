@@ -109,7 +109,7 @@ function SidebarNav({
       <SidebarContent className="py-4 flex-1 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-2">
+            <SidebarMenu>
               {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
                 const active =
                   pathname === href ||
