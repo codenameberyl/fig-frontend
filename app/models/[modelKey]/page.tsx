@@ -150,12 +150,14 @@ export default function ModelDetailPage() {
                     {/* Diagonal baseline */}
                     <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }] as any} stroke="#2e2e3e" strokeDasharray="4 4" />
                     {/* The Dot marking the exact intersection */}
-                    <Dot 
-                      cx={/* logic to convert FPR to coordinate */} 
-                      cy={/* logic to convert TPR to coordinate */} 
-                      r={4} 
+                    <ReferenceDot 
+                      x={roc.optimal_fpr} 
+                      y={roc.optimal_tpr} 
+                      r={5} 
                       fill="#a78bfa" 
                       stroke="#fff" 
+                      strokeWidth={2} 
+                      isFront={true} 
                     />
                   </LineChart>
                 </ResponsiveContainer>
