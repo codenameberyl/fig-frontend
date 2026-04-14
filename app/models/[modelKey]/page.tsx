@@ -132,8 +132,8 @@ export default function ModelDetailPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={rocData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-                    <XAxis dataKey="fpr" type="number" domain={[-0.02, 1.02]} stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "FPR", position: "insideBottom", offset: -6, fill: "#64748b", fontSize: 10 }} />
-                    <YAxis type="number" domain={[-0.02, 1.02]} stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
+                    <XAxis dataKey="fpr" type="number" domain={[-0.05, 1.05]} stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "FPR", position: "insideBottom", offset: -5, fill: "#64748b", fontSize: 10 }} />
+                    <YAxis type="number" domain={[-0.05, 1.05]} stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
                     <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
                     <ReferenceLine x={0} y={0} stroke="#2e2e3e" strokeDasharray="4 4" />
                     <Line
