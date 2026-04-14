@@ -136,9 +136,9 @@ export default function ModelDetailPage() {
                     <YAxis type="number" domain={[-0.05, 1.05]} ticks={[0.0, 0.2, 0.4, 0.6, 0.8, 1]} stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
                     <Tooltip
                       {...TOOLTIP_STYLE}
-                      formatter={(v: number, name: string) => [
-                        fmt(v, 4),
-                        name === "tpr" ? "TPR" : name,
+                      formatter={(v: number | string | undefined, name: string) => [
+                        typeof v === "number" ? fmt(v, 4) : v ?? "",
+                        "TPR",
                       ]}
                       labelFormatter={(label: number) => `FPR: ${fmt(label, 4)}`}
                     />
