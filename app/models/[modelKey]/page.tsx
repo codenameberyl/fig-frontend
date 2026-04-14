@@ -156,8 +156,8 @@ export default function ModelDetailPage() {
                           stroke="#fff"
                           strokeWidth={1.5}
                           label={{
-                            value: `T=${roc.optimal_threshold.toFixed(2)}`,
-                            position: "top",
+                            value: `T=${roc.optimal_threshold.toFixed(4)}`,
+                            position: "bottom",
                             fill: "#facc15",
                             fontSize: 10,
                           }}
