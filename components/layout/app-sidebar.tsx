@@ -197,8 +197,8 @@ function SidebarNav({
                         className={cn(
                           "transition-all h-auto px-3 py-3",
                           pathname === "/docs"
-                            ? "!bg-violet-600/15 !text-violet-300"
-                            : "!bg-transparent !text-slate-400 !hover:text-slate-200 !hover:bg-white/5"
+                            ? "!bg-violet-600/15 !text-violet-300 hover:!bg-violet-600/20 hover:!text-violet-200"
+                            : "!bg-transparent !text-slate-400 hover:!text-slate-200 hover:!bg-white/5"
                         )}
                       >
                         <Link href="/docs">
@@ -217,8 +217,8 @@ function SidebarNav({
                     className={cn(
                       "transition-all h-9",
                       pathname === "/docs"
-                        ? "bg-violet-600/15 text-violet-300"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                        ? "!bg-violet-600/15 !text-violet-300"
+                        : "!text-slate-400 hover:!text-slate-200 hover:!bg-white/5"
                     )}
                   >
                     <Link href="/docs" className="flex items-center gap-3">
