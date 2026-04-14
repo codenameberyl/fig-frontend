@@ -195,7 +195,7 @@ function SidebarNav({
                         asChild
                         isActive={pathname === "/docs"}
                         className={cn(
-                          "transition-all h-9",
+                          "transition-all mb-1 px-3 py-3",
                           pathname === "/docs"
                             ? "bg-violet-600/15 text-violet-300"
                             : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
