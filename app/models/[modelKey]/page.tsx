@@ -134,7 +134,14 @@ export default function ModelDetailPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
                     <XAxis dataKey="fpr" type="number" domain={[-0.05, 1.05]} ticks={[0.0, 0.2, 0.4, 0.6, 0.8, 1]} stroke="#64748b" tick={{ fontSize: 10, fontFamily: "JetBrains Mono" }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "FPR", position: "insideBottom", offset: -5, fill: "#64748b", fontSize: 10 }} />
                     <YAxis type="number" domain={[-0.05, 1.05]} ticks={[0.0, 0.2, 0.4, 0.6, 0.8, 1]} stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v: number) => v.toFixed(1)} label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#64748b", fontSize: 10 }} />
-                    <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => typeof v === 'number' ? fmt(v, 4) : v} />
+                    <Tooltip
+                      {...TOOLTIP_STYLE}
+                      formatter={(v: number, name: string) => [
+                        fmt(v, 4),
+                        name === "tpr" ? "TPR" : name,
+                      ]}
+                      labelFormatter={(label: number) => `FPR: ${fmt(label, 4)}`}
+                    />
                     <ReferenceLine x={0} y={0} stroke="#2e2e3e" strokeDasharray="4 4" />
                     <Line
                       type="linear"
@@ -146,18 +153,28 @@ export default function ModelDetailPage() {
                     />
                     {/* Diagonal baseline */}
                     <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }] as any} stroke="#2e2e3e" strokeDasharray="4 4" />
+                    {/* Optimal threshold marker */}
                     {roc && (
                       <>
                         <ReferenceDot
                           x={roc.optimal_fpr}
                           y={roc.optimal_tpr}
-                          r={4}
+                          r={5}
                           fill="#facc15"
                           stroke="#fff"
                           strokeWidth={1.5}
+                        />
+                        {/* Guide lines */}
+                        <ReferenceLine x={roc.optimal_fpr} stroke="#facc15" strokeDasharray="4 4" />
+                        <ReferenceLine y={roc.optimal_tpr} stroke="#facc15" strokeDasharray="4 4" />
+                        {/* Label (cleaner placement) */}
+                        <ReferenceDot
+                          x={roc.optimal_fpr}
+                          y={roc.optimal_tpr}
+                          r={0}
                           label={{
-                            value: `T=${roc.optimal_threshold.toFixed(4)}`,
-                            position: "bottom",
+                            value: `T=${roc.optimal_threshold.toFixed(3)}`,
+                            position: "top",
                             fill: "#facc15",
                             fontSize: 10,
                           }}
