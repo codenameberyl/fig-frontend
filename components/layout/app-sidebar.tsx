@@ -202,7 +202,7 @@ function SidebarNav({
                         )}
                       >
                         <Link href="/docs">
-                          <BookOpen className="h-4 w-4" />
+                          <BookOpen className={cn("h-4 w-4" active ? "text-violet-400" : "text-slate-500")} />
                         </Link>
                       </SidebarMenuButton>
                     </TooltipTrigger>
@@ -222,7 +222,7 @@ function SidebarNav({
                     )}
                   >
                     <Link href="/docs" className="flex items-center gap-3">
-                      <BookOpen className="h-4 w-4 flex-shrink-0" />
+                      <BookOpen className={cn("h-4 w-4 flex-shrink-0" active ? "text-violet-400" : "text-slate-500")} />
                       <span className="text-sm">Documentation</span>
                     </Link>
                   </SidebarMenuButton>
