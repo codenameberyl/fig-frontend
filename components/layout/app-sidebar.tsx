@@ -121,15 +121,15 @@ function SidebarNav({
                     asChild
                     isActive={active}
                     className={cn(
-                      "relative transition-all group h-auto mb-1 px-3 py-3",
+                      "relative transition-all h-auto mb-1 px-3 py-3 group",
                       active
-                        ? "!bg-violet-600/15 !text-violet-300 !hover:bg-violet-600/20 !hover:text-violet-200"
-                        : "!bg-transparent !text-slate-400 !hover:text-slate-200 !hover:bg-white/5"
+                        ? "!bg-violet-600/15 !text-violet-300 hover:!bg-violet-600/20 hover:!text-violet-200"
+                        : "!bg-transparent !text-slate-400 hover:!text-slate-200 hover:!bg-white/5"
                     )}
                   >
                     <Link href={href} className="flex items-center gap-3 w-full relative">
                       {active && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.6)]" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.6)]" />
                       )}
                       <Icon
                         className={cn(
@@ -197,7 +197,7 @@ function SidebarNav({
                         className={cn(
                           "transition-all h-auto px-3 py-3",
                           pathname === "/docs"
-                            ? "!bg-violet-600/15 !text-violet-300 hover:!bg-violet-600/20 hover:!text-violet-200"
+                            ? "!bg-violet-600/15 !text-violet-300"
                             : "!bg-transparent !text-slate-400 hover:!text-slate-200 hover:!bg-white/5"
                         )}
                       >
@@ -215,10 +215,10 @@ function SidebarNav({
                     asChild
                     isActive={pathname === "/docs"}
                     className={cn(
-                      "transition-all h-9",
+                      "transition-all h-auto px-3 py-3",
                       pathname === "/docs"
                         ? "!bg-violet-600/15 !text-violet-300"
-                        : "!text-slate-400 hover:!text-slate-200 hover:!bg-white/5"
+                        : "!bg-transparent !text-slate-400 hover:!text-slate-200 hover:!bg-white/5"
                     )}
                   >
                     <Link href="/docs" className="flex items-center gap-3">
